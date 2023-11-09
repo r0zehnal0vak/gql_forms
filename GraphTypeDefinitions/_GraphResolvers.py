@@ -30,8 +30,7 @@ from uoishelpers.resolvers import putSingleEntityToDb
 # tyto pouzijete v GraphTypeDefinitions
 #
 ###########################################################################################################################
-from gql_forms.DBDefinitions import (
-    BaseModel,
+from DBDefinitions import (
     RequestModel,
     FormModel,
     SectionModel,

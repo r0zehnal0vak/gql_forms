@@ -1,7 +1,8 @@
 from uoishelpers.dataloaders import createIdLoader, createFkeyLoader
 from functools import cache
+import logging
 
-from gql_forms.DBDefinitions import (
+from DBDefinitions import (
     FormModel, 
     FormTypeModel, 
     FormCategoryModel,
@@ -124,4 +125,124 @@ async def createLoaders(asyncSessionMaker, models=dbmodels):
     Loaders = type('Loaders', (), attrs)   
     return Loaders()
 
+class Loaders:
+    requests = None
+    histories = None
+    forms = None
+    formtypes = None
+    formcategories = None
+    sections = None
+    parts = None
+    items = None
+    itemtypes = None
+    itemcategories = None
+    pass
+
+async def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
+    class Loaders:
+        @property
+        @cache
+        def requests(self):
+            return createIdLoader(asyncSessionMaker, RequestModel)
+        
+        @property
+        @cache
+        def histories(self):
+            return createIdLoader(asyncSessionMaker, HistoryModel)
+        
+        @property
+        @cache
+        def forms(self):
+            return createIdLoader(asyncSessionMaker, FormModel)
+        
+        @property
+        @cache
+        def formtypes(self):
+            return createIdLoader(asyncSessionMaker, FormTypeModel)
+        
+        @property
+        @cache
+        def formcategories(self):
+            return createIdLoader(asyncSessionMaker, FormCategoryModel)
+        
+        @property
+        @cache
+        def sections(self):
+            return createIdLoader(asyncSessionMaker, SectionModel)
+
+        @property
+        @cache
+        def parts(self):
+            return createIdLoader(asyncSessionMaker, PartModel)
+        
+        @property
+        @cache
+        def items(self):
+            return createIdLoader(asyncSessionMaker, ItemModel)
+        
+        @property
+        @cache
+        def itemtypes(self):
+            return createIdLoader(asyncSessionMaker, ItemTypeModel)
+
+        @property
+        @cache
+        def itemcategories(self):
+            return createIdLoader(asyncSessionMaker, ItemCategoryModel)
+        
+    return Loaders()
+
+
+def getLoadersFromInfo(info) -> Loaders:
+    context = info.context
+    loaders = context["loaders"]
+    return loaders
+
 from functools import cache
+
+
+demouser = {
+    "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+    "name": "John",
+    "surname": "Newbie",
+    "email": "john.newbie@world.com",
+    "roles": [
+        {
+            "valid": True,
+            "group": {
+                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                "name": "Uni"
+            },
+            "roletype": {
+                "id": "ced46aa4-3217-4fc1-b79d-f6be7d21c6b6",
+                "name": "administrátor"
+            }
+        },
+        {
+            "valid": True,
+            "group": {
+                "id": "2d9dcd22-a4a2-11ed-b9df-0242ac120003",
+                "name": "Uni"
+            },
+            "roletype": {
+                "id": "ae3f0d74-6159-11ed-b753-0242ac120003",
+                "name": "rektor"
+            }
+        }
+    ]
+}
+
+def getUserFromInfo(info):
+    context = info.context
+    #print(list(context.keys()))
+    result = context.get("user", None)
+    if result is None:
+        authorization = context["request"].headers.get("Authorization", None)
+        if authorization is not None:
+            if 'Bearer ' in authorization:
+                token = authorization.split(' ')[1]
+                if token == "2d9dc5ca-a4a2-11ed-b9df-0242ac120003":
+                    result = demouser
+                    context["user"] = result
+    logging.debug("getUserFromInfo", result)
+    return result

@@ -1,7 +1,7 @@
 from sqlalchemy.future import select
 import strawberry
 
-from gql_forms.DBDefinitions import BaseModel, UserModel, RequestModel, SectionModel
+from DBDefinitions import BaseModel, UserModel, RequestModel, SectionModel
 
 
 def AsyncSessionFromInfo(info):

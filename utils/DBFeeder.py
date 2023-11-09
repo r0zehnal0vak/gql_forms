@@ -5,7 +5,7 @@ from functools import cache
 # import the base model, when appolo sever ask your container for the first time, gql will ask
 # next step define some resolver, how to use resolver in the file graptype
 # check all data strcture in database if it have -- (work)
-from gql_forms.DBDefinitions import (
+from DBDefinitions import (
     FormCategoryModel,
     FormTypeModel,
     ItemTypeModel,
@@ -158,6 +158,7 @@ import os
 import json
 from uoishelpers.feeders import ImportModels
 import datetime
+import uuid
 
 def get_demodata():
     def datetime_parser(json_dict):
@@ -174,10 +175,15 @@ def get_demodata():
                         dateValueWOtzinfo = None
                 
                 json_dict[key] = dateValueWOtzinfo
+            
+            if ("id" == key) or ("_id" in key):
+                if value not in ["", None]:
+                    json_dict[key] = uuid.UUID(value)
+
         return json_dict
 
 
-    with open("./systemdata.json", "r") as f:
+    with open("./systemdata.json", "r", encoding="utf-8") as f:
         jsonData = json.load(f, object_hook=datetime_parser)
 
     return jsonData
@@ -189,7 +195,6 @@ async def initDB(asyncSessionMaker):
         dbModels = [
             FormCategoryModel,
             FormTypeModel,
-            ItemTypeModel,
             ItemCategoryModel,
             ItemTypeModel
             ]
