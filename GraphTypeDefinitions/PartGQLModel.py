@@ -1,6 +1,7 @@
 import strawberry
 import datetime
 import typing
+import uuid
 
 from typing import Annotated
 
@@ -10,19 +11,21 @@ SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel
 ItemGQLModel = Annotated["ItemGQLModel", strawberry.lazy(".ItemGQLModel")]
 
 @strawberry.federation.type(
-    keys=["id"], description="""Type representing a part in the section"""
+    keys=["id"], 
+    name="FormPartGQLModel",
+    description="""Type representing a part in the section"""
 )
 class PartGQLModel:
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
+    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
         loader = getLoadersFromInfo(info).parts
         result = await loader.load(id)
         if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
+            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
         return result
 
     @strawberry.field(description="""Entity primary key""")
-    def id(self) -> strawberry.ID:
+    def id(self) -> uuid.UUID:
         return self.id
 
     @strawberry.field(description="""Part's name (part for Student)""")
@@ -49,9 +52,34 @@ class PartGQLModel:
         result = await loader.filter_by(part_id=self.id)
         return result
 
+#############################################################
+#
+# Queries
+#
+#############################################################
+# @strawberry.field(description="")
+# async def form_part_by_id(self, info: strawberry, id: strawberry.uuid) -> "PartGQLModel":
+#     loader = getLoadersFromInfo(info).parts
+#     result = await loader.load(id)
+#     return result
 
-@strawberry.input
-class PartUpdateGQLModel:
+#############################################################
+#
+# Mutations
+#
+#############################################################
+
+@strawberry.input(description="")
+class FormPartInsertGQLModel:
+    name: str
+    section_id: uuid.UUID
+    id: typing.Optional[uuid.UUID] = None
+    order: typing.Optional[int] = None
+
+@strawberry.input(description="")
+class FormPartUpdateGQLModel:
+    id: uuid.UUID
     lastchange: datetime.datetime
+    section_id: typing.Optional[uuid.UUID] = None
     name: typing.Optional[str] = None
     order: typing.Optional[int] = None

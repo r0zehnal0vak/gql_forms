@@ -1,6 +1,7 @@
 import strawberry
 import typing
 import datetime
+import uuid
 
 from typing import Annotated
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
@@ -19,15 +20,17 @@ class FormGQLModel:
     This class extends the base `RequestModel` from the database and adds additional fields and methods needed for use in GraphQL.
     """
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
+    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
+        # print("resolve_reference", id, flush=True)
+        # print("resolve_reference", type(id), flush=True)
         loader = getLoadersFromInfo(info).forms
         result = await loader.load(id)
         if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
+            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
         return result
 
     @strawberry.field(description="""Entity primary key""")
-    def id(self) -> strawberry.ID:
+    def id(self) -> uuid.UUID:
         return self.id
 
     @strawberry.field(description="""Request's name (like Vacation)""")
@@ -47,7 +50,7 @@ class FormGQLModel:
         return self.valid
 
     @strawberry.field(description="""Request's status""")
-    def status(self) -> bool:
+    def status(self) -> typing.Optional[bool]:
         return self.status
 
     @strawberry.field(description="Retrieves the sections related to this form (form has several sections)")
@@ -58,21 +61,27 @@ class FormGQLModel:
         sections = await loader.filter_by(form_id=self.id)
         return sections
 
-    # @strawberry.field(description="Retrieves the user who has initiated this request")
-    # async def creator(self, info: strawberry.types.Info) -> "UserGQLModel":
-    #     #user = UserGQLModel(id=self.createdby)
-    #     from .externals import UserGQLModel
-    #     return await UserGQLModel.resolve_reference(id=self.createdby)
+    @strawberry.field(description="Retrieves the user who has initiated this request")
+    async def creator(self, info: strawberry.types.Info) -> typing.Optional["UserGQLModel"]:
+        #user = UserGQLModel(id=self.createdby)
+        from .externals import UserGQLModel
+        return await UserGQLModel.resolve_reference(id=self.createdby)
 
     @strawberry.field(description="Retrieves the type of form")
     async def type(self, info: strawberry.types.Info) -> typing.Optional["FormTypeGQLModel"]:
+        from .FormTypeGQLModel import FormTypeGQLModel
         result = await FormTypeGQLModel.resolve_reference(info, id=self.type_id)
         return result
   
+#############################################################
+#
+# Queries
+#
+#############################################################
 
 @strawberry.field(description="Retrieves the form type")
 async def form_by_id(
-    self, info: strawberry.types.Info, id: strawberry.ID
+    self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[FormGQLModel]:
     result = await FormGQLModel.resolve_reference(info=info, id=id)
     return result
@@ -87,22 +96,18 @@ async def form_page(
 
 
 
-
-
-
-
-
-
-
-
-
+#############################################################
+#
+# Mutations
+#
+#############################################################
 
 @strawberry.input
 class FormInsertGQLModel:
     name: str
     
-    id: typing.Optional[strawberry.ID] = None
-    form_type_id: typing.Optional[strawberry.ID] = None
+    id: typing.Optional[uuid.UUID] = None
+    form_type_id: typing.Optional[uuid.UUID] = None
     place: typing.Optional[str] = ""
     published_date: typing.Optional[datetime.datetime] = datetime.datetime.now()
     reference: typing.Optional[str] = ""
@@ -111,10 +116,10 @@ class FormInsertGQLModel:
 @strawberry.input
 class FormUpdateGQLModel:
     lastchange: datetime.datetime
-    id: strawberry.ID
+    id: uuid.UUID
 
     name: typing.Optional[str] = None
-    form_type_id: typing.Optional[strawberry.ID] = None
+    form_type_id: typing.Optional[uuid.UUID] = None
     place: typing.Optional[str] = None
     published_date: typing.Optional[datetime.datetime] = None
     reference: typing.Optional[str] = None
@@ -123,7 +128,7 @@ class FormUpdateGQLModel:
     
 @strawberry.type
 class FormResultGQLModel:
-    id: strawberry.ID = None
+    id: uuid.UUID = None
     msg: str = None
 
     @strawberry.field(description="""Result of form operation""")

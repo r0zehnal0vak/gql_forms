@@ -11,19 +11,21 @@ FormGQLModel = Annotated["FormGQLModel", strawberry.lazy(".FormGQLModel")]
 PartGQLModel = Annotated["PartGQLModel", strawberry.lazy(".PartGQLModel")]
 
 @strawberry.federation.type(
-    keys=["id"], description="""Type representing a section in the form"""
+    keys=["id"], 
+    name="FormSectionGQLModel",
+    description="""Type representing a section in the form"""
 )
 class SectionGQLModel:
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
+    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
         loader = getLoadersFromInfo(info).sections
         result = await loader.load(id)
         if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
+            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
         return result
 
     @strawberry.field(description="""Entity primary key""")
-    def id(self) -> strawberry.ID:
+    def id(self) -> uuid.UUID:
         return self.id
 
     @strawberry.field(description="""Section's name""")
@@ -50,10 +52,23 @@ class SectionGQLModel:
         result = await FormGQLModel.resolve_reference(info, self.form_id)
         return result
 
+#############################################################
+#
+# Queries
+#
+#############################################################
+
+
+#############################################################
+#
+# Mutations
+#
+#############################################################
 
 @strawberry.input
 class SectionInsertGQLModel:
     name: str
+    form_id: uuid.UUID
     id: typing.Optional[uuid.UUID] = None
     order: typing.Optional[int] = None
     valid: typing.Optional[bool] = None
@@ -62,6 +77,7 @@ class SectionInsertGQLModel:
 class SectionUpdateGQLModel:
     id: uuid.UUID
     lastchange: datetime.datetime
+    form_id: typing.Optional[uuid.UUID] = None
     name: typing.Optional[str] = None
     order: typing.Optional[int] = None
     valid: typing.Optional[bool] = None

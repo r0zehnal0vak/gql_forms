@@ -56,13 +56,58 @@ from .externals import UserGQLModel
 class Query:
     @strawberry.field(description="""Say hello to the world""")
     async def say_hello_forms(
-        self, info: strawberry.types.Info, id: strawberry.ID
+        self, info: strawberry.types.Info, id: uuid.UUID
     ) -> Union[str, None]:
         result = f"Hello {id}"
         return result
 
 
+    from .RequestGQLModel import (
+        request_by_id, 
+        requests_page, 
+        requests_by_creator
+    )
+    request_by_id = request_by_id
+    requests_page = requests_page
+    requests_by_creator = requests_by_creator
 
+    from .FormGQLModel import (
+        form_by_id, 
+        form_page
+    )
+    form_by_id = form_by_id
+    form_page = form_page
+
+    from .FormTypeGQLModel import (
+        form_type_by_id,
+        form_type_page
+    )
+    form_type_by_id = form_type_by_id
+    form_type_page = form_type_page
+
+    from .FormCategoryGQLModel import (
+        form_category_by_id,
+        form_category_page
+    )
+    form_category_by_id = form_category_by_id
+    form_category_page = form_category_page
+
+    from .ItemGQLModel import (
+        item_by_id
+    )
+    item_by_id = item_by_id
+
+    from .ItemTypeGQLModel import (
+        item_type_by_id, item_type_page
+    )
+    item_type_by_id = item_type_by_id
+    item_type_page = item_type_page
+
+    from .ItemCategoryGQLModel import (
+        item_category_by_id, item_category_page
+    )
+    item_category_by_id = item_category_by_id
+    item_category_page = item_category_page
 
 ###########################################################################################################################
 #

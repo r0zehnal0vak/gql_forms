@@ -138,7 +138,7 @@ class Loaders:
     itemcategories = None
     pass
 
-async def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
+def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
     class Loaders:
         @property
         @cache
@@ -246,3 +246,8 @@ def getUserFromInfo(info):
                     context["user"] = result
     logging.debug("getUserFromInfo", result)
     return result
+
+def createLoadersContext(asyncSessionMaker):
+    return {
+        "loaders": createLoaders(asyncSessionMaker)
+    }

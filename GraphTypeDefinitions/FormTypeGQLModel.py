@@ -1,6 +1,7 @@
 import strawberry
 import datetime
 import typing
+import uuid
 
 from typing import Annotated
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
@@ -14,15 +15,15 @@ class FormTypeGQLModel:
     """
     """
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: strawberry.ID):
+    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
         loader = getLoadersFromInfo(info).formtypes
         result = await loader.load(id)
         if result is not None:
-            result._type_definition = cls._type_definition  # little hack :)
+            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
         return result
 
     @strawberry.field(description="""Entity primary key""")
-    def id(self) -> strawberry.ID:
+    def id(self) -> uuid.UUID:
         return self.id
 
     @strawberry.field(description="""Request's name (like Vacation)""")
@@ -39,13 +40,19 @@ class FormTypeGQLModel:
 
     @strawberry.field(description="""Request's time of last update""")
     async def category(self, info: strawberry.types.Info) -> typing.Optional["FormCategoryGQLModel"]:
+        from .FormCategoryGQLModel import FormCategoryGQLModel
         result = await FormCategoryGQLModel.resolve_reference(info, self.category_id)
         return result
     
+#############################################################
+#
+# Queries
+#
+#############################################################
 
 @strawberry.field(description="Retrieves the form type")
 async def form_type_by_id(
-    self, info: strawberry.types.Info, id: strawberry.ID
+    self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[FormTypeGQLModel]:
     result = await FormTypeGQLModel.resolve_reference(info=info, id=id)
     return result
@@ -55,6 +62,26 @@ async def form_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
 ) -> typing.List[FormTypeGQLModel]:
     loader = getLoadersFromInfo(info).formtypes
-    stmt = loader.offset(skip).limit(limit)
-    result = await loader.execute_select(stmt)
+    result = await loader.page(skip=skip, limit=limit)
     return result
+
+#############################################################
+#
+# Mutations
+#
+#############################################################
+
+@strawberry.input
+class FormTypeInsertGQLModel:
+    name: str
+    
+    id: typing.Optional[uuid.UUID] = None
+    valid: typing.Optional[bool] = True
+
+@strawberry.input
+class FormTypeUpdateGQLModel:
+    lastchange: datetime.datetime
+    id: uuid.UUID
+
+    name: typing.Optional[str] = None
+    valid: typing.Optional[bool] = None

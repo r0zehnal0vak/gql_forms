@@ -176,7 +176,8 @@ def get_demodata():
                 
                 json_dict[key] = dateValueWOtzinfo
             
-            if ("id" == key) or ("_id" in key):
+            if (key in ["id", "changedby", "createdby"]) or ("_id" in key):
+                #print(key, value)
                 if value not in ["", None]:
                     json_dict[key] = uuid.UUID(value)
 

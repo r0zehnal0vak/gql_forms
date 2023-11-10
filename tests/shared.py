@@ -3,17 +3,26 @@ import sys
 import asyncio
 
 # setting path
-sys.path.append("../gql_forms")
+#sys.path.append("../gql_forms")
 
 import pytest
 
 # from ..uoishelpers.uuid import UUIDColumn
 
-from gql_forms.DBDefinitions import BaseModel
-from gql_forms.DBDefinitions import FormModel, FormTypeModel, FormCategoryModel
-from gql_forms.DBDefinitions import SectionModel, PartModel
-from gql_forms.DBDefinitions import ItemModel, ItemTypeModel, ItemCategoryModel
-from gql_forms.DBDefinitions import RequestModel, HistoryModel
+from DBDefinitions import (
+    BaseModel,
+    FormModel,
+    FormTypeModel,
+    FormCategoryModel,
+    PartModel,
+    SectionModel,
+    ItemModel,
+    ItemTypeModel,
+    ItemCategoryModel,
+    RequestModel,
+    HistoryModel
+)
+
 
 async def prepare_in_memory_sqllite():
     from sqlalchemy.ext.asyncio import create_async_engine
@@ -31,7 +40,9 @@ async def prepare_in_memory_sqllite():
 
     return async_session_maker
 
-from gql_forms.DBFeeder import get_demodata
+
+from utils.DBFeeder import get_demodata
+
 
 async def prepare_demodata(async_session_maker):
     data = get_demodata()
@@ -41,20 +52,47 @@ async def prepare_demodata(async_session_maker):
     await ImportModels(
         async_session_maker,
         [
-            FormModel, FormTypeModel, FormCategoryModel,
-            SectionModel, PartModel, 
-            ItemModel, ItemTypeModel, ItemCategoryModel,
-            RequestModel, HistoryModel
+            FormModel,
+            FormTypeModel,
+            FormCategoryModel,
+            PartModel,
+            SectionModel,
+            ItemModel,
+            ItemTypeModel,
+            ItemCategoryModel,
+            RequestModel,
+            HistoryModel
         ],
         data,
     )
 
 
-from gql_forms.Dataloaders import createLoaders_3, createLoaders
+from utils.Dataloaders import createLoadersContext
 
-
-async def createContext(asyncSessionMaker):
-    return {
-        "asyncSessionMaker": asyncSessionMaker,
-        "all": await createLoaders(asyncSessionMaker),
+def createContext(asyncSessionMaker, withuser=True):
+    loadersContext = createLoadersContext(asyncSessionMaker)
+    user = {
+        "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+        "name": "John",
+        "surname": "Newbie",
+        "email": "john.newbie@world.com"
     }
+    if withuser:
+        loadersContext["user"] = user
+    
+    return loadersContext
+
+def createInfo(asyncSessionMaker, withuser=True):
+    class Request():
+        @property
+        def headers(self):
+            return {"Authorization": "Bearer 2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+        
+    class Info():
+        @property
+        def context(self):
+            context = createContext(asyncSessionMaker, withuser=withuser)
+            context["request"] = Request()
+            return context
+        
+    return Info()
