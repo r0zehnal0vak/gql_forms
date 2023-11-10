@@ -72,9 +72,7 @@ class HistoryInsertGQLModel:
     request_id: uuid.UUID
     form_id: uuid.UUID
 
-    id: typing.Optional[uuid.UUID] = None
-    
-
+    id: typing.Optional[uuid.UUID] = None   
 
 @strawberry.input(description="")
 class HistoryUpdateGQLModel:

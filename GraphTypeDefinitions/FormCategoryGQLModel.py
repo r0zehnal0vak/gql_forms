@@ -49,12 +49,24 @@ async def form_category_by_id(
     result = await FormCategoryGQLModel.resolve_reference(info=info, id=id)
     return result
 
+
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class FormCategoryWhereFilter:
+    name: str
+    name_en: str
+
 @strawberry.field(description="Retrieves the form category")
 async def form_category_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: typing.Optional[FormCategoryWhereFilter] = None
 ) -> typing.List[FormCategoryGQLModel]:
+    wf = None if where is None else strawberry.asdict(where)
     loader = getLoadersFromInfo(info).formcategories
-    result = await loader.page(skip=skip, limit=limit)
+    result = await loader.page(skip=skip, limit=limit, where=wf)
     return result
 
 #############################################################

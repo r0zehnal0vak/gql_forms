@@ -13,34 +13,44 @@ from .shared import (
     prepare_in_memory_sqllite,
     get_demodata,
     createContext,
+    CreateSchemaFunction
 )
+from .client import CreateClientFunction
 
 def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
     async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
+
+        def testResult(resp):
+            print("response", resp)
+            errors = resp.get("errors", None)
+            assert errors is None
+            
+            respdata = resp.get("data", None)
+            assert respdata is not None
+            
+            respdata = respdata[queryEndpoint]
+            assert respdata is not None
+
+            for att in attributeNames:
+                assert respdata[att] == f'{datarow[att]}'
+
+        schemaExecutor = CreateSchemaFunction()
+        clientExecutor = CreateClientFunction()
 
         data = get_demodata()
         datarow = data[tableName][0]
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query($id: UUID!){" f"{queryEndpoint}(id: $id)" f"{content}" "}"
 
-        context_value = createContext(async_session_maker)
         variable_values = {"id": f'{datarow["id"]}'}
         
         logging.debug(f"query for {query} with {variable_values}")
 
-        resp = await schema.execute(
-            query, context_value=context_value, variable_values=variable_values
-        )
-
-        respdata = resp.data[queryEndpoint]
-
-        assert resp.errors is None
-
-        for att in attributeNames:
-            assert respdata[att] == f'{datarow[att]}'
+        resp = await schemaExecutor(query, variable_values)
+        testResult(resp)
+        resp = await clientExecutor(query, variable_values)
+        testResult(resp)
 
     return result_test
 
@@ -48,35 +58,58 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
     async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
+
+        def testResult(resp):
+            errors = resp.get("errors", None)
+            assert errors is None
+            respdata = resp.get("data", None)
+            assert respdata is not None
+
+            respdata = respdata.get(queryEndpoint, None)
+            assert respdata is not None
+            datarows = data[tableName]           
+
+            for rowa, rowb in zip(respdata, datarows):
+                for att in attributeNames:
+                    assert rowa[att] == f'{rowb[att]}'            
+
+        schemaExecutor = CreateSchemaFunction()
+        clientExecutor = CreateClientFunction()
 
         data = get_demodata()
 
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
 
-        context_value = createContext(async_session_maker)
-        logging.debug(f"query for {query}")
-
-        resp = await schema.execute(query, context_value=context_value)
-
-        respdata = resp.data[queryEndpoint]
-        datarows = data[tableName]
-
-        assert resp.errors is None
-
-        for rowa, rowb in zip(respdata, datarows):
-            for att in attributeNames:
-                assert rowa[att] == f'{rowb[att]}'
-
+        resp = await schemaExecutor(query)
+        testResult(resp)
+        resp = await clientExecutor(query)
+        testResult(resp)
+        
     return result_test
 
 def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
     async def result_test():
-        async_session_maker = await prepare_in_memory_sqllite()
-        await prepare_demodata(async_session_maker)
+
+        def testResult(resp):
+            print(resp)
+            errors = resp.get("errors", None)
+            assert errors is None
+            respdata = resp.get("data", None)
+            assert respdata is not None
+
+            logging.info(respdata)
+            respdata = respdata.get('_entities', None)
+            assert respdata is not None
+
+            assert len(respdata) == 1
+            respdata = respdata[0]
+
+            assert respdata['id'] == rowid
+
+        schemaExecutor = CreateSchemaFunction()
+        clientExecutor = CreateClientFunction()
 
         content = "{" + ", ".join(attributeNames) + "}"
 
@@ -93,16 +126,12 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
                 '}' + 
                 '}')
 
-            context_value = createContext(async_session_maker)
             variable_values = {"id": rowid}
             #variable_values = {"id", row['id']}
-            logging.info(f"query for {query} with {variable_values}")
-            resp = await schema.execute(query, context_value=context_value, variable_values=variable_values)
-            data = resp.data
-            logging.info(data)
-            data = data['_entities'][0]
-
-            assert data['id'] == rowid
+            resp = await schemaExecutor(query, variable_values)
+            testResult(resp)
+            resp = await clientExecutor(query, variable_values)
+            testResult(resp)
 
     return result_test
 
@@ -137,7 +166,7 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
         assert "$lastchange: DateTime!" in query, "query must have parameter $lastchange: DateTime!"
         assert "lastchange: $lastchange" in query, "query must use lastchange: $lastchange"
         assert tableName != "", "missing table name"
-        
+
         async_session_maker = await prepare_in_memory_sqllite()
         await prepare_demodata(async_session_maker)
 

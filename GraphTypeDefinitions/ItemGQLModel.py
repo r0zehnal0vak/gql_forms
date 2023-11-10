@@ -77,6 +77,26 @@ async def item_by_id(
     result = await ItemGQLModel.resolve_reference(info=info, id=id)
     return result
 
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class FormItemWhereFilter:
+    name: str
+    name_en: str
+    type_id: uuid.UUID
+    value: str
+
+@strawberry.field(description="Retrieves the item type")
+async def item_page(
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 0,
+    where: typing.Optional[FormItemWhereFilter] = None
+) -> typing.List[ItemGQLModel]:
+    loader = getLoadersFromInfo(info).items
+    wf = None if where is None else strawberry.asdict(where)
+    result = await loader.page(skip, limit, where = wf)
+    return result
 #############################################################
 #
 # Mutations

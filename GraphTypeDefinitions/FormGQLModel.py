@@ -90,12 +90,27 @@ async def form_by_id(
     result = await FormGQLModel.resolve_reference(info=info, id=id)
     return result
 
+
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class FormWhereFilter:
+    name: str
+    name_en: str
+    valid: bool
+    type_id: uuid.UUID
+    createdby: uuid.UUID
+
 @strawberry.field(description="Retrieves the form type")
 async def form_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: typing.Optional[FormWhereFilter] = None
 ) -> typing.List[FormGQLModel]:
+    wf = None if where is None else strawberry.asdict(where)
     loader = getLoadersFromInfo(info).forms
-    result = await loader.page(skip, limit)
+    result = await loader.page(skip, limit, where=wf)
     return result    
 
 

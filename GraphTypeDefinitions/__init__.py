@@ -75,9 +75,10 @@ class Query:
     form_category_page = form_category_page
 
     from .ItemGQLModel import (
-        item_by_id
+        item_by_id, item_page
     )
     item_by_id = item_by_id
+    item_page = item_page
 
     from .ItemTypeGQLModel import (
         item_type_by_id, item_type_page

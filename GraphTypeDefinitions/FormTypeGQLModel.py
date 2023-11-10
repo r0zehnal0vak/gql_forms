@@ -57,12 +57,23 @@ async def form_type_by_id(
     result = await FormTypeGQLModel.resolve_reference(info=info, id=id)
     return result
 
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class FormTypeWhereFilter:
+    name: str
+    name_en: str
+
 @strawberry.field(description="Retrieves the form type")
 async def form_type_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
+    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+    where: typing.Optional[FormTypeWhereFilter] = None
 ) -> typing.List[FormTypeGQLModel]:
     loader = getLoadersFromInfo(info).formtypes
-    result = await loader.page(skip=skip, limit=limit)
+    wf = None if where is None else strawberry.asdict(where)
+    result = await loader.page(skip=skip, limit=limit, where=wf)
     return result
 
 #############################################################

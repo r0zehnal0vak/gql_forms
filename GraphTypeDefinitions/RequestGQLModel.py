@@ -6,6 +6,7 @@ import uuid
 from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
+from GraphTypeDefinitions._GraphPermissions import RoleBasedPermission
 
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".externals")]
 HistoryGQLModel = Annotated["HistoryGQLModel", strawberry.lazy(".HistoryGQLModel")]
@@ -13,7 +14,8 @@ HistoryGQLModel = Annotated["HistoryGQLModel", strawberry.lazy(".HistoryGQLModel
 
 # define the type help to get attribute name and name
 @strawberry.federation.type(
-    keys=["id"], description="""Entity representing a request (digital form of a paper, aka "student request to the dean")"""
+    keys=["id"], description="""Entity representing a request (digital form of a paper, aka "student request to the dean")""",
+    
 )
 class RequestGQLModel:
     """
@@ -28,7 +30,12 @@ class RequestGQLModel:
             result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
         return result
 
-    @strawberry.field(description="""Entity primary key""")
+    @strawberry.field(
+        description="""Entity primary key""",
+        permission_classes=[
+            RoleBasedPermission(roles="administrator")
+        ]
+    )
     def id(self) -> uuid.UUID:
         return self.id
 

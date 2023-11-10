@@ -1,4 +1,5 @@
 from typing import List
+import time
 import typing
 import logging
 import asyncio
@@ -25,7 +26,7 @@ from utils.DBFeeder import initDB
 connectionString = ComposeConnectionString()
 
 from strawberry.asgi import GraphQL
-from utils.Dataloaders import createLoaders_3, createLoaders
+from utils.Dataloaders import createLoaders
 
 appcontext = {}
 @asynccontextmanager
@@ -63,7 +64,15 @@ async def get_context():
             pass
         
     from utils.Dataloaders import createLoadersContext
-    return createLoadersContext(appcontext["asyncSessionMaker"])
+    from GraphTypeDefinitions._GraphPermissions import ReadRoles, ReadRolesSync
+    start = time.time_ns()
+    roles = await ReadRoles(roleUrlEndpoint="http://localhost:8088/gql/")
+    #roles = ReadRolesSync(roleUrlEndpoint="http://localhost:8088/gql/")
+    end = time.time_ns()
+    print((end - start) / 1000000, "ms",  roles)
+
+    context = createLoadersContext(appcontext["asyncSessionMaker"])
+    return {**context, "userroles": roles}
 
 graphql_app = GraphQLRouter(
     schema,
