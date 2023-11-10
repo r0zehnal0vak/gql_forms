@@ -68,3 +68,8 @@ class FormItemCategoryUpdateGQLModel:
     id: uuid.UUID
 
     name: typing.Optional[str] = None
+
+@strawberry.type(description="")
+class FormItemCategoryResultGQLModel:
+    id: uuid.UUID
+    msg: str

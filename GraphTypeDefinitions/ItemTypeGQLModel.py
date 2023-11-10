@@ -27,6 +27,10 @@ class ItemTypeGQLModel:
     def id(self) -> uuid.UUID:
         return self.id
 
+    @strawberry.field(description="""timestamp""")
+    def lastchange(self) -> datetime.datetime:
+        return self.lastchange
+
     @strawberry.field(description="""Type name""")
     def name(self) -> str:
         return self.name
@@ -85,31 +89,25 @@ class FormItemTypeResultGQLModel:
     msg: str
 
     @strawberry.field(description="")
-    async def item(info: strawberry.types.Info) -> "ItemTypeGQLModel":
-        result = await ItemTypeGQLModel.resolve_reference(info, id)
+    async def item_type(self, info: strawberry.types.Info) -> "ItemTypeGQLModel":
+        result = await ItemTypeGQLModel.resolve_reference(info, self.id)
         return result
 
 @strawberry.mutation(description="")
-async def form_item_insert(self, info: strawberry.types.Info, item: FormItemTypeInsertGQLModel) -> FormItemTypeResultGQLModel:
-    loader = getLoadersFromInfo(info).items
-    row = await loader.insert(item)
-    result = FormItemTypeResultGQLModel()
-    result.msg = "ok"
-    result.id = item.id
-    if row is None:
-        result.msg = "fail"
-        
+async def form_item_type_insert(self, info: strawberry.types.Info, item_type: FormItemTypeInsertGQLModel) -> FormItemTypeResultGQLModel:
+    loader = getLoadersFromInfo(info).itemtypes
+    row = await loader.insert(item_type)
+    result = FormItemTypeResultGQLModel(msg="fail", id=None)
+    result.msg = "fail" if row is None else "ok"
+    result.id = None if row is None else row.id       
     return result
 
 
 @strawberry.mutation
-async def form_item_update(self, info: strawberry.types.Info, item: FormItemTypeUpdateGQLModel) -> FormItemTypeResultGQLModel:
-    loader = getLoadersFromInfo(info).items
-    row = await loader.update(item)
-    result = FormItemTypeResultGQLModel()
-    result.msg = "ok"
-    result.id = item.id
-    if row is None:
-        result.msg = "fail"
-        
+async def form_item_type_update(self, info: strawberry.types.Info, item_type: FormItemTypeUpdateGQLModel) -> FormItemTypeResultGQLModel:
+    loader = getLoadersFromInfo(info).itemtypes
+    row = await loader.update(item_type)
+    result = FormItemTypeResultGQLModel(msg="fail", id=None)
+    result.msg = "fail" if row is None else "ok"
+    result.id = item_type.id       
     return result

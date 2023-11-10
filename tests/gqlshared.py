@@ -1,5 +1,6 @@
 import logging
 import sqlalchemy
+import uuid
 import sys
 import asyncio
 
@@ -113,6 +114,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
         await prepare_demodata(async_session_maker)
         context_value = createContext(async_session_maker)
         logging.debug(f"query for {query} with {variables}")
+        print(f"query for {query} with {variables}")
         resp = await schema.execute(
             query=query, 
             variable_values=variables, 
@@ -125,3 +127,68 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
         for a in asserts:
             a(respdata)
     return test_frontend_query
+
+def createUpdateQuery(query="{}", variables={}, tableName=""):
+    @pytest.mark.asyncio
+    async def test_update():
+        logging.debug("test_update")
+        assert variables.get("id", None) is not None, "variables has not id"
+        variables["id"] = uuid.UUID(f"{variables['id']}")
+        assert "$lastchange: DateTime!" in query, "query must have parameter $lastchange: DateTime!"
+        assert "lastchange: $lastchange" in query, "query must use lastchange: $lastchange"
+        assert tableName != "", "missing table name"
+        
+        async_session_maker = await prepare_in_memory_sqllite()
+        await prepare_demodata(async_session_maker)
+
+        print("variables['id']", variables, flush=True)
+        statement = sqlalchemy.text(f"SELECT id, lastchange FROM {tableName} WHERE id=:id").bindparams(id=variables['id'])
+        #statement = sqlalchemy.text(f"SELECT id, lastchange FROM {tableName}")
+        print("statement", statement, flush=True)
+        async with async_session_maker() as session:
+            rows = await session.execute(statement)
+            row = rows.first()
+            
+            print("row", row)
+            id = row[0]
+            lastchange = row[1]
+
+            print(id, lastchange)
+
+        variables["lastchange"] = lastchange
+        variables["id"] = f'{variables["id"]}'
+        context_value = createContext(async_session_maker)
+        logging.debug(f"query for {query} with {variables}")
+        print(f"query for {query} with {variables}")
+        resp = await schema.execute(
+            query=query, 
+            variable_values=variables, 
+            context_value=context_value
+        )
+
+        assert resp.errors is None
+        respdata = resp.data
+        assert respdata is not None
+        print("respdata", respdata)
+        keys = list(respdata.keys())
+        assert len(keys) == 1, "expected update test has one result"
+        key = keys[0]
+        result = respdata.get(key, None)
+        assert result is not None, f"{key} is None (test update) with {query}"
+        entity = None
+        for key, value in result.items():
+            print(key, value, type(value))
+            if isinstance(value, dict):
+                entity = value
+                break
+        assert entity is not None, f"expected entity in response to {query}"
+
+        for key, value in entity.items():
+            if key in ["id", "lastchange"]:
+                continue
+            print("attribute check", type(key), f"[{key}] is {value} ?= {variables[key]}")
+            assert value == variables[key], f"test on update failed {value} != {variables[key]}"
+
+        
+
+    return test_update

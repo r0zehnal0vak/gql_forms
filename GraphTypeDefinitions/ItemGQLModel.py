@@ -41,7 +41,7 @@ class ItemGQLModel:
         return self.name
 
     @strawberry.field(description="""Item's order""")
-    def order(self) -> str:
+    def order(self) -> int:
         return self.order
 
     @strawberry.field(description="""Item's time of last update""")
@@ -85,8 +85,8 @@ async def item_by_id(
 
 @strawberry.input
 class FormItemInsertGQLModel:
-    part_id: uuid.UUID
     name: str
+    part_id: uuid.UUID
 
     id: typing.Optional[uuid.UUID] = None
     value: typing.Optional[str] = None
@@ -118,8 +118,24 @@ class FormItemResultGQLModel:
 @strawberry.field(
     description="""Updates a section."""
 )
-async def update(self, info: strawberry.types.Info, item: ItemUpdateGQLModel) -> "FormItemResultGQLModel":
+async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQLModel) -> "FormItemResultGQLModel":
     result = FormItemResultGQLModel()
     result.id = item.id
-    result.msg = "fail"
+
+    loader = getLoadersFromInfo(info).items
+    row = await loader.update(item)
+    result.msg = "fail" if row is None else "ok"
+    return result    
+
+
+@strawberry.field(
+    description="""Updates a section."""
+)
+async def item_insert(self, info: strawberry.types.Info, item: FormItemInsertGQLModel) -> "FormItemResultGQLModel":
+    result = FormItemResultGQLModel()
+
+    loader = getLoadersFromInfo(info).items
+    row = await loader.insert(item)
+    result.msg = "fail" if row is None else "ok"
+    result.id = None if row is None else row.id
     return result    

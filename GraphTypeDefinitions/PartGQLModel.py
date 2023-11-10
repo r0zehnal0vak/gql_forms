@@ -83,3 +83,32 @@ class FormPartUpdateGQLModel:
     section_id: typing.Optional[uuid.UUID] = None
     name: typing.Optional[str] = None
     order: typing.Optional[int] = None
+
+@strawberry.type(description="")
+class FormPartResultGQLModel:
+    id: uuid.UUID
+    msg: str
+
+    @strawberry.field(description="")
+    async def part(self, info: strawberry.types.Info) -> PartGQLModel:
+        result = await PartGQLModel.resolve_reference(info=info, id=self.id)
+        return result
+
+@strawberry.field(description="")
+async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQLModel) -> FormPartResultGQLModel:
+    result = FormPartResultGQLModel(id=part.id, msg="fail")
+    loader = getLoadersFromInfo(info).parts
+    row = await loader.insert(part)
+    if row:
+        result.msg = "ok"
+        result.id = row.id
+    return result
+
+@strawberry.field(description="")
+async def part_update(self, info: strawberry.types.Info, part: FormPartUpdateGQLModel) -> FormPartResultGQLModel:
+    result = FormPartResultGQLModel(id=part.id, msg="fail")
+    loader = getLoadersFromInfo(info).parts
+    row = await loader.update(part)
+    if row:
+        result.msg = "ok"
+    return result

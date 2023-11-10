@@ -77,3 +77,8 @@ class FormCategoryUpdateGQLModel:
 
     name: typing.Optional[str] = None
     valid: typing.Optional[bool] = None
+
+@strawberry.type(description="")
+class FormCategoryResultGQLModel:
+    id: uuid.UUID
+    msg: str

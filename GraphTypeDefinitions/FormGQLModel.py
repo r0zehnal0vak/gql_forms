@@ -65,7 +65,11 @@ class FormGQLModel:
     async def creator(self, info: strawberry.types.Info) -> typing.Optional["UserGQLModel"]:
         #user = UserGQLModel(id=self.createdby)
         from .externals import UserGQLModel
-        return await UserGQLModel.resolve_reference(id=self.createdby)
+        result = (None 
+            if self.createdby is None else 
+            await UserGQLModel.resolve_reference(id=self.createdby)
+        )
+        return result
 
     @strawberry.field(description="Retrieves the type of form")
     async def type(self, info: strawberry.types.Info) -> typing.Optional["FormTypeGQLModel"]:
@@ -126,7 +130,7 @@ class FormUpdateGQLModel:
     valid: typing.Optional[bool] = None
     
     
-@strawberry.type
+@strawberry.type(description="")
 class FormResultGQLModel:
     id: uuid.UUID = None
     msg: str = None
@@ -151,9 +155,7 @@ async def form_update(self, info: strawberry.types.Info, form: FormUpdateGQLMode
     loader = getLoadersFromInfo(info).forms
     row = await loader.update(form)
     result = FormResultGQLModel()
-    result.msg = "ok"
+    result.msg = "fail" if row is None else "ok"
     result.id = form.id
-    if row is None:
-        result.msg = "fail"
         
     return result   

@@ -85,3 +85,8 @@ class FormTypeUpdateGQLModel:
 
     name: typing.Optional[str] = None
     valid: typing.Optional[bool] = None
+
+@strawberry.type(description="")
+class FormTypeResultGQLModel:
+    id: uuid.UUID
+    msg: str

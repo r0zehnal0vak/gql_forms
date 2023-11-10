@@ -67,7 +67,7 @@ class HistoryGQLModel:
 
 
 @strawberry.input(description="")
-class FormHistoryInsertGQLModel:
+class HistoryInsertGQLModel:
     name: str
     request_id: uuid.UUID
     form_id: uuid.UUID
@@ -77,8 +77,13 @@ class FormHistoryInsertGQLModel:
 
 
 @strawberry.input(description="")
-class FormHistoryUpdateGQLModel:
+class HistoryUpdateGQLModel:
     lastchange: datetime.datetime
     id: uuid.UUID
 
     name: typing.Optional[str] = None
+
+@strawberry.type(description="")
+class HistoryResultGQLModel:
+    id: uuid.UUID
+    msg: str

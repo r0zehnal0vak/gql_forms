@@ -5,24 +5,6 @@ import uuid
 from contextlib import asynccontextmanager
 
 
-@asynccontextmanager
-async def withInfo(info):
-    asyncSessionMaker = info.context["asyncSessionMaker"]
-    async with asyncSessionMaker() as session:
-        try:
-            yield session
-        finally:
-            pass
-
-
-# def AsyncSessionFromInfo(info):
-#     print(
-#         "obsolte function used AsyncSessionFromInfo, use withInfo context manager instead"
-#     )
-#     return info.context["session"]
-
-def getLoaders(info):
-    return info.context['all']
 
 ###########################################################################################################################
 #
@@ -127,8 +109,24 @@ class Mutation:
     from .FormGQLModel import form_update
     form_update = form_update
 
+    from .ItemGQLModel import item_insert
+    form_item_insert = item_insert
+
+    from .ItemGQLModel import item_update
+    form_item_update = item_update
     #from .HistoryGQLModel import 
 
+    from .ItemTypeGQLModel import form_item_type_insert
+    form_item_type_insert = form_item_type_insert
+
+    from .ItemTypeGQLModel import form_item_type_update
+    form_item_type_update = form_item_type_update
+
+    from .PartGQLModel import part_insert
+    form_part_insert = part_insert
+
+    from .PartGQLModel import part_update
+    form_part_update = part_update
 
 
 ###########################################################################################################################

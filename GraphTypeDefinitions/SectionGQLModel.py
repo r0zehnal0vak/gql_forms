@@ -65,7 +65,7 @@ class SectionGQLModel:
 #
 #############################################################
 
-@strawberry.input
+@strawberry.input(description="")
 class SectionInsertGQLModel:
     name: str
     form_id: uuid.UUID
@@ -73,7 +73,7 @@ class SectionInsertGQLModel:
     order: typing.Optional[int] = None
     valid: typing.Optional[bool] = None
 
-@strawberry.input
+@strawberry.input(description="")
 class SectionUpdateGQLModel:
     id: uuid.UUID
     lastchange: datetime.datetime
@@ -81,3 +81,8 @@ class SectionUpdateGQLModel:
     name: typing.Optional[str] = None
     order: typing.Optional[int] = None
     valid: typing.Optional[bool] = None
+
+@strawberry.type(description="")
+class SectionResultGQLModel:
+    id: uuid.UUID
+    msg: str

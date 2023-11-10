@@ -109,3 +109,9 @@ class FormRequestUpdateGQLModel:
     id: uuid.UUID
 
     name: typing.Optional[str] = None
+
+@strawberry.type(description="")
+class FormResultGQLModel:
+    id: uuid.UUID
+    msg: str
+

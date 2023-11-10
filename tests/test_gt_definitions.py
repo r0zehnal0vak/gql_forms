@@ -1,6 +1,7 @@
 import sqlalchemy
 import sys
 import asyncio
+import uuid
 
 # setting path
 #sys.path.append("../gql_forms")
@@ -34,6 +35,8 @@ test_reference_itemcategories = createResolveReferenceTest(tableName='formitemca
 test_query_request_by_id = createByIdTest(tableName="formrequests", queryEndpoint="requestById")
 test_query_request_page = createPageTest(tableName="formrequests", queryEndpoint="requestsPage")
 
+test_query_form_by_id = createByIdTest(tableName="forms", queryEndpoint="formById")
+test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage")
 test_query_form_type_by_id = createByIdTest(tableName="formtypes", queryEndpoint="formTypeById")
 test_query_form_type_page = createPageTest(tableName="formtypes", queryEndpoint="formTypePage")
 test_query_form_category_by_id = createByIdTest(tableName="formcategories", queryEndpoint="formCategoryById")
@@ -50,6 +53,151 @@ test_query_item_category_page = createPageTest(tableName="formitemcategories", q
 # test_resolve_section = createResolveReferenceTest('formsections', 'SectionGQLModel', ['id', 'lastchange'])
 # test_resolve_part = createResolveReferenceTest('formparts', 'PartGQLModel', ['id', 'lastchange', 'order'])
 
+
+test_form_insert = createFrontendQuery(query="""
+    mutation($id: UUID!, $name: String!) { 
+        result: formInsert(form: {id: $id, name: $name}) { 
+            id
+            msg
+            form {
+                id
+                name
+            }
+        }
+    }
+    """, 
+    variables={"id": "ccde3a8b-81d0-4e2b-9aac-42e0eb2255b3", "name": "new form"},
+    asserts=[]
+)
+
+
+from .gqlshared import createUpdateQuery
+test_form_update = createUpdateQuery(
+    query="""
+        mutation($id: UUID!, $name: String!, $lastchange: DateTime!) {
+            formUpdate(form: {id: $id, name: $name, lastchange: $lastchange}) {
+                id
+                msg
+                form {
+                    id
+                    name
+                }
+            }
+        }
+    """,
+    variables={"id": "190d578c-afb1-11ed-9bd8-0242ac110002", "name": "new name"},
+    tableName="forms"
+)
+
+test_item_insert = createFrontendQuery(query="""
+    mutation($id: UUID!, $name: String!, $partId: UUID!) { 
+        result: formItemInsert(item: {id: $id, name: $name, partId: $partId}) { 
+            id
+            msg
+            item {
+                id
+                name
+            }
+        }
+    }
+    """, 
+    variables={"id": "ee40b3bf-ac51-4dbb-8f73-d5da30bf8017", "name": "new item", "partId": "52e3f2d6-afb1-11ed-9bd8-0242ac110002"},
+    asserts=[]
+)
+
+
+test_item_update = createUpdateQuery(
+    query="""
+        mutation($id: UUID!, $name: String!, $lastchange: DateTime!, $value: String!) {
+            formItemUpdate(item: {id: $id, name: $name, lastchange: $lastchange, value: $value}) {
+                id
+                msg
+                item {
+                    id
+                    name
+                    value
+                    lastchange
+                }
+            }
+        }
+
+    """,
+    variables={"id": "72a3d4b0-afb1-11ed-9bd8-0242ac110002", "name": "new name", "value": "other value"},
+    tableName="formitems"
+)
+
+test_item_type_insert = createFrontendQuery(query="""
+    mutation($id: UUID!, $name: String!) { 
+        result: formItemTypeInsert(itemType: {id: $id, name: $name}) { 
+            id
+            msg
+            itemType {
+                id
+                name
+            }
+        }
+    }
+    """, 
+    variables={"id": "53365ad1-acce-4c29-b0b9-c51c67af4033", "name": "new type"},
+    asserts=[]
+)
+
+
+test_item_type_update = createUpdateQuery(
+    query="""
+        mutation($id: UUID!, $name: String!, $lastchange: DateTime!) {
+            formItemTypeUpdate(itemType: {id: $id, name: $name, lastchange: $lastchange}) {
+                id
+                msg
+                itemType {
+                    id
+                    name
+                    lastchange
+                }
+            }
+        }
+
+    """,
+    variables={"id": "9bdb916a-afb6-11ed-9bd8-0242ac110002", "name": "new name"},
+    tableName="formitemtypes"
+)
+
+
+test_part_insert = createFrontendQuery(query="""
+    mutation($id: UUID!, $name: String!, $section_id: UUID!) { 
+        result: formPartInsert(part: {id: $id, name: $name, sectionId: $section_id}) { 
+            id
+            msg
+            part {
+                id
+                name
+            }
+        }
+    }
+    """, 
+    variables={"id": "53365ad1-acce-4c29-b0b9-c51c67af4033", "name": "new part", "section_id": "48bbc7d4-afb1-11ed-9bd8-0242ac110002"},
+    asserts=[]
+)
+
+
+test_part_update = createUpdateQuery(
+    query="""
+        mutation($id: UUID!, $name: String!, $lastchange: DateTime!) {
+            formPartUpdate(part: {id: $id, name: $name, lastchange: $lastchange}) {
+                id
+                msg
+                part {
+                    id
+                    name
+                    lastchange
+                }
+            }
+        }
+
+    """,
+    variables={"id": "52e3ee26-afb1-11ed-9bd8-0242ac110002", "name": "new name"},
+    tableName="formparts"
+)
 
 @pytest.mark.asyncio
 async def test_large_query_1():
