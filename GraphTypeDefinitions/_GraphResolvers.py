@@ -1,130 +1,122 @@
-from ast import Call
-from typing import Coroutine, Callable, Awaitable, Union, List
+import strawberry
 import uuid
-from sqlalchemy.future import select
-from sqlalchemy.orm import selectinload, joinedload
-from sqlalchemy.ext.asyncio import AsyncSession
+import datetime
+import typing
 
-from uoishelpers.resolvers import (
-    create1NGetter,
-    createEntityByIdGetter,
-    createEntityGetter,
-    createInsertResolver,
-    createUpdateResolver,
-)
-from uoishelpers.resolvers import putSingleEntityToDb
+UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".externals")]
 
+@strawberry.field(description="""Entity primary key""")
+def resolve_id(self) -> uuid.UUID:
+    return self.id
 
-## Nasleduji funkce, ktere lze pouzit jako asynchronni resolvery
+@strawberry.field(description="""Name """)
+def resolve_name(self) -> str:
+    return self.name
 
-###########################################################################################################################
-#
-# zde si naimportujte sve SQLAlchemy modely
-#
-###########################################################################################################################
+@strawberry.field(description="""Time of last update""")
+def resolve_lastchange(self) -> datetime.datetime:
+    return self.lastchange
 
+@strawberry.field(description="""Time of entity introduction""")
+def resolve_created(self) -> typing.Optional[datetime.datetime]:
+    return self.lastchange
 
-###########################################################################################################################
-#
-# zde definujte sve resolvery s pomoci funkci vyse
-# tyto pouzijete v GraphTypeDefinitions
-#
-###########################################################################################################################
-from DBDefinitions import (
-    RequestModel,
-    FormModel,
-    SectionModel,
-    PartModel,
+@strawberry.field(description="""Who created entity""")
+async def resolve_createdby(self) -> typing.Optional["UserGQLModel"]:
+    from .externals import UserGQLModel
+    result = None if self.createdby is None else await UserGQLModel.resolve_reference(self.createdby)
+    return result
+
+@strawberry.field(description="""Who made last change""")
+async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
+    from .externals import UserGQLModel
+    result = None if self.changedby is None else await UserGQLModel.resolve_reference(self.changedby)
+    return result
+
+@strawberry.field(description="""English name""")
+def resolve_name_en(self) -> str:
+    return self.name_en
+
+def createAttributeScalarResolver(
+    scalarType: None = None, 
+    foreignKeyName: str = None,
+    description="Retrieves item by its id",
+    permission_classes=()
+    ):
+
+    assert scalarType is not None
+    assert foreignKeyName is not None
+
+    @strawberry.field(description=description, permission_classes=permission_classes)
+    async def foreignkeyScalar(
+        self, info: strawberry.types.Info
+    ) -> typing.Optional[scalarType]:
+        # 👇 self must have an attribute, otherwise it is fail of definition
+        assert hasattr(self, foreignKeyName)
+        id = getattr(self, foreignKeyName, None)
+        
+        result = None if id is None else await scalarType.resolve_reference(info=info, id=id)
+        return result
+    return foreignkeyScalar
+
+def createAttributeVectorResolver(
+    scalarType: None = None, 
+    whereFilterType: None = None,
+    foreignKeyName: str = None,
+    loaderLambda = lambda info: None, 
+    description="Retrieves items paged", 
+    skip: int=0, 
+    limit: int=10):
+
+    assert scalarType is not None
+    assert foreignKeyName is not None
+
+    @strawberry.field(description=description)
+    async def foreignkeyVector(
+        self, info: strawberry.types.Info,
+        skip: int = skip,
+        limit: int = limit,
+        where: typing.Optional[whereFilterType] = None
+    ) -> typing.List[scalarType]:
+        
+        params = {foreignKeyName: self.id}
+        loader = loaderLambda(info)
+        assert loader is not None
+        
+        wf = None if where is None else strawberry.asdict(where)
+        result = await loader.page(skip=skip, limit=limit, where=wf, extendedfilter=params)
+        return result
+    return foreignkeyVector
+
+def createRootResolver_by_id(scalarType: None, description="Retrieves item by its id"):
+    assert scalarType is not None
+    @strawberry.field(description=description)
+    async def by_id(
+        self, info: strawberry.types.Info, id: uuid.UUID
+    ) -> typing.Optional[scalarType]:
+        result = await scalarType.resolve_reference(info=info, id=id)
+        return result
+    return by_id
+
+def createRootResolver_by_page(
+    scalarType: None, 
+    whereFilterType: None,
+    loaderLambda = lambda info: None, 
+    description="Retrieves items paged", 
+    skip: int=0, 
+    limit: int=10):
+
+    assert scalarType is not None
+    assert whereFilterType is not None
     
-    ItemModel,
-    ItemTypeModel,
-    ItemCategoryModel,
-
-    FormCategoryModel,
-    FormTypeModel,
-
-    HistoryModel
-)
-
-
-## request resolvers,
-# it will use for form the table if y know the id , u can extract it from the database
-requestselect = select(RequestModel)
-formtypeselect = select(FormTypeModel)
-formcategorySelect = select(FormCategoryModel)
-
-itemcategoryselect = select(ItemCategoryModel)
-itemtypeselect = select(ItemTypeModel)
-
-resolveRequestById = createEntityByIdGetter(RequestModel)
-# try to get from the database ..of request u can gert multiblae request
-resolveRequestAll = createEntityGetter(RequestModel)
-
-resolveRequestByUser = create1NGetter(RequestModel, foreignKeyName="creator_id")
-
-# allow u to retry which are related to the request if i have the request id
-# resolveSectionsForRequest = create1NGetter(SectionModel, foreignKeyName='request_id', options=joinedload(SectionModel.parts))
-resolveSectionsForRequest = create1NGetter(SectionModel, foreignKeyName="request_id")
-# #
-# resolveUserForRequest = createEntityByIdGetter(UserModel)
-# bith allow update request maske cration of request model
-resolverUpdateRequest = createUpdateResolver(RequestModel)
-resolveInsertRequest = createInsertResolver(RequestModel)
-
-"""Function for searching requests by three letters"""
-
-
-async def resolveRequestsByThreeLetters(
-    session: AsyncSession, validity=None, letters: str = ""
-) -> List[RequestModel]:
-    if len(letters) < 3:
-        return []
-    stmt = select(RequestModel).where(RequestModel.name.like(f"%{letters}%"))
-    if validity is not None:
-        stmt = stmt.filter_by(valid=True)
-
-    dbSet = await session.execute(stmt)
-    return dbSet.scalars()
-
-
-resolveUpdateForm = createUpdateResolver(FormModel, safe=True)
-
-## section resolvers
-resolveSectionById = createEntityByIdGetter(SectionModel)
-resolveSectionAll = createEntityGetter(SectionModel)
-resolvePartsForSection = create1NGetter(PartModel, foreignKeyName="section_id")
-
-resolverUpdateSection = createUpdateResolver(SectionModel, safe=True)
-resolveInsertSection = createInsertResolver(SectionModel)
-
-## part resolvers
-resolvePartById = createEntityByIdGetter(PartModel)
-resolvePartAll = createEntityGetter(PartModel)
-resolveItemsForPart = create1NGetter(ItemModel, foreignKeyName="part_id")
-
-resolverUpdatePart = createUpdateResolver(PartModel, safe=True)
-resolveInsertPart = createInsertResolver(PartModel)
-
-## item resolvers
-resolveItemById = createEntityByIdGetter(ItemModel)
-resolveItemAll = createEntityGetter(ItemModel)
-
-resolverUpdateItem = createUpdateResolver(ItemModel, safe=True)
-resolveInsertItem = createInsertResolver(ItemModel)
-
-async def createNewRequest(session, formtypeid):
-    request = RequestModel()
-    
-    session.add(request)
-    form = FormModel()
-    form.type_id = formtypeid
-
-    session.add(form)
-    history = HistoryModel()
-    session.add(history)
-    history.form_id = form.id
-    history.request_id = request.id
-    await session.commit()
-    print("new request", request.id, form.id, flush=True)
-    return request
-    
+    @strawberry.field(description=description)
+    async def paged(
+        self, info: strawberry.types.Info, 
+        skip: int=skip, limit: int=limit, where: typing.Optional[whereFilterType] = None
+    ) -> typing.List[scalarType]:
+        loader = loaderLambda(info)
+        assert loader is not None
+        wf = None if where is None else strawberry.asdict(where)
+        result = await loader.page(skip=skip, limit=limit, where=wf)
+        return result
+    return paged

@@ -46,12 +46,10 @@ class Query:
 
     from .RequestGQLModel import (
         request_by_id, 
-        requests_page, 
-        requests_by_creator
+        requests_page
     )
     request_by_id = request_by_id
     requests_page = requests_page
-    requests_by_creator = requests_by_creator
 
     from .FormGQLModel import (
         form_by_id, 
@@ -104,30 +102,41 @@ class Query:
 @strawberry.federation.type(extend=True)
 class Mutation:
 
-    from .FormGQLModel import form_insert
+    from .FormGQLModel import (
+        form_insert,
+        form_update
+    )
     form_insert = form_insert
-
-    from .FormGQLModel import form_update
     form_update = form_update
 
-    from .ItemGQLModel import item_insert
+    from .ItemGQLModel import (
+        item_insert,
+        item_update
+    )
     form_item_insert = item_insert
-
-    from .ItemGQLModel import item_update
     form_item_update = item_update
     #from .HistoryGQLModel import 
 
-    from .ItemTypeGQLModel import form_item_type_insert
+    from .ItemTypeGQLModel import (
+        form_item_type_insert,
+        form_item_type_update
+    )
     form_item_type_insert = form_item_type_insert
-
-    from .ItemTypeGQLModel import form_item_type_update
     form_item_type_update = form_item_type_update
 
-    from .PartGQLModel import part_insert
+    from .PartGQLModel import (
+        part_insert,
+        part_update
+    )
     form_part_insert = part_insert
-
-    from .PartGQLModel import part_update
     form_part_update = part_update
+
+    from .FormCategoryGQLModel import (
+        form_category_insert,
+        form_category_update
+    )
+    form_category_insert = form_category_insert
+    form_category_update = form_category_update
 
 
 ###########################################################################################################################
@@ -139,4 +148,4 @@ class Mutation:
 #
 ###########################################################################################################################
 
-schema = strawberry.federation.Schema(Query, types=(UserGQLModel,), mutation=Mutation)
+schema = strawberry.federation.Schema(Query, types=(UserGQLModel, ), mutation=Mutation)

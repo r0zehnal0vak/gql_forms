@@ -6,6 +6,21 @@ import uuid
 from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
+from .BaseGQLModel import BaseGQLModel
+
+from GraphTypeDefinitions._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby,
+    createRootResolver_by_id,
+    createRootResolver_by_page,
+    createAttributeScalarResolver,
+    createAttributeVectorResolver
+)
 
 FormGQLModel = Annotated["FormGQLModel", strawberry.lazy(".FormGQLModel")]
 PartGQLModel = Annotated["PartGQLModel", strawberry.lazy(".PartGQLModel")]
@@ -15,26 +30,22 @@ PartGQLModel = Annotated["PartGQLModel", strawberry.lazy(".PartGQLModel")]
     name="FormSectionGQLModel",
     description="""Type representing a section in the form"""
 )
-class SectionGQLModel:
+class SectionGQLModel(BaseGQLModel):
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
-        loader = getLoadersFromInfo(info).sections
-        result = await loader.load(id)
-        if result is not None:
-            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
-        return result
+    def getLoader(cls, info):
+        return getLoadersFromInfo(info).sections
+    
+    # @classmethod
+    # async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
+    # implementation is inherited
 
-    @strawberry.field(description="""Entity primary key""")
-    def id(self) -> uuid.UUID:
-        return self.id
-
-    @strawberry.field(description="""Section's name""")
-    def name(self) -> str:
-        return self.name
-
-    @strawberry.field(description="""Section's time of last update""")
-    def lastchange(self) -> datetime.datetime:
-        return self.lastchange
+    id = resolve_id
+    name = resolve_name
+    changedby = resolve_changedby
+    lastchange = resolve_lastchange
+    created = resolve_created
+    createdby = resolve_createdby
+    name_en = resolve_name_en
 
     @strawberry.field(description="""Section's order""")
     def order(self) -> int:
@@ -67,22 +78,49 @@ class SectionGQLModel:
 
 @strawberry.input(description="")
 class SectionInsertGQLModel:
-    name: str
-    form_id: uuid.UUID
-    id: typing.Optional[uuid.UUID] = None
-    order: typing.Optional[int] = None
+    name: str = strawberry.field(description="Section name")
+    form_id: uuid.UUID = strawberry.field(description="id of parent entity")
+    id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
+    order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     valid: typing.Optional[bool] = None
+    createdby: strawberry.Private[uuid.UUID] = None 
 
 @strawberry.input(description="")
 class SectionUpdateGQLModel:
-    id: uuid.UUID
-    lastchange: datetime.datetime
-    form_id: typing.Optional[uuid.UUID] = None
-    name: typing.Optional[str] = None
-    order: typing.Optional[int] = None
+    id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
+    lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
+    name: typing.Optional[str] = strawberry.field(description="Section name", default=None)
+    order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     valid: typing.Optional[bool] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type(description="")
 class SectionResultGQLModel:
     id: uuid.UUID
     msg: str
+
+    @strawberry.field(description="")
+    async def section(self, info: strawberry.types.Info) -> SectionGQLModel:
+        return await SectionGQLModel.resolve_reference(info, self.id)
+
+@strawberry.mutation(description="")
+async def section_insert(self, info: strawberry.types.Info, section: SectionInsertGQLModel) -> SectionResultGQLModel:
+    user = getUserFromInfo(info)
+    section.createdby = uuid.UUID(user["id"])
+    loader = getLoadersFromInfo(info).requests
+    row = await loader.insert(section)
+    result = SectionResultGQLModel()
+    result.msg = "ok"
+    result.id = row.id
+    return result
+
+@strawberry.mutation(description="")
+async def section_update(self, info: strawberry.types.Info, section: SectionUpdateGQLModel) -> SectionResultGQLModel:
+    user = getUserFromInfo(info)
+    section.changedby = uuid.UUID(user["id"])
+    loader = getLoadersFromInfo(info).requests
+    row = await loader.update(section)
+    result = SectionResultGQLModel()
+    result.msg = "fail" if row is None else "ok"
+    result.id = section.id
+    return result   

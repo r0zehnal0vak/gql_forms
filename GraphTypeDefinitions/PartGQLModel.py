@@ -6,6 +6,21 @@ import uuid
 from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
+from .BaseGQLModel import BaseGQLModel
+
+from GraphTypeDefinitions._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby,
+    createRootResolver_by_id,
+    createRootResolver_by_page,
+    createAttributeScalarResolver,
+    createAttributeVectorResolver
+)
 
 SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel")]
 ItemGQLModel = Annotated["ItemGQLModel", strawberry.lazy(".ItemGQLModel")]
@@ -15,26 +30,22 @@ ItemGQLModel = Annotated["ItemGQLModel", strawberry.lazy(".ItemGQLModel")]
     name="FormPartGQLModel",
     description="""Type representing a part in the section"""
 )
-class PartGQLModel:
+class PartGQLModel(BaseGQLModel):
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
-        loader = getLoadersFromInfo(info).parts
-        result = await loader.load(id)
-        if result is not None:
-            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
-        return result
+    def getLoader(cls, info):
+        return getLoadersFromInfo(info).parts
+    
+    # @classmethod
+    # async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
+    # implementation is inherited
 
-    @strawberry.field(description="""Entity primary key""")
-    def id(self) -> uuid.UUID:
-        return self.id
-
-    @strawberry.field(description="""Part's name (part for Student)""")
-    def name(self) -> str:
-        return self.name
-
-    @strawberry.field(description="""Part's time of last update""")
-    def lastchange(self) -> datetime.datetime:
-        return self.lastchange
+    id = resolve_id
+    name = resolve_name
+    changedby = resolve_changedby
+    lastchange = resolve_lastchange
+    created = resolve_created
+    createdby = resolve_createdby
+    name_en = resolve_name_en
 
     @strawberry.field(description="""Part's order""")
     def order(self) -> int:
@@ -71,18 +82,20 @@ class PartGQLModel:
 
 @strawberry.input(description="")
 class FormPartInsertGQLModel:
-    name: str
+    name: str = strawberry.field(description="Part name")
     section_id: uuid.UUID
-    id: typing.Optional[uuid.UUID] = None
-    order: typing.Optional[int] = None
+    id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
+    order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
+    createdby: strawberry.Private[uuid.UUID] = None 
 
 @strawberry.input(description="")
 class FormPartUpdateGQLModel:
-    id: uuid.UUID
-    lastchange: datetime.datetime
-    section_id: typing.Optional[uuid.UUID] = None
-    name: typing.Optional[str] = None
-    order: typing.Optional[int] = None
+    id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
+    lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
+    section_id: typing.Optional[uuid.UUID] = strawberry.field(description="id of parent entity", default=None)
+    name: typing.Optional[str] = strawberry.field(description="Part name", default=None)
+    order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
+    changedby: strawberry.Private[uuid.UUID] = None
 
 @strawberry.type(description="")
 class FormPartResultGQLModel:
@@ -96,6 +109,8 @@ class FormPartResultGQLModel:
 
 @strawberry.field(description="")
 async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQLModel) -> FormPartResultGQLModel:
+    user = getUserFromInfo(info)
+    part.createdby = uuid.UUID(user["id"])
     result = FormPartResultGQLModel(id=part.id, msg="fail")
     loader = getLoadersFromInfo(info).parts
     row = await loader.insert(part)
@@ -106,6 +121,8 @@ async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQL
 
 @strawberry.field(description="")
 async def part_update(self, info: strawberry.types.Info, part: FormPartUpdateGQLModel) -> FormPartResultGQLModel:
+    user = getUserFromInfo(info)
+    part.changedby = uuid.UUID(user["id"])
     result = FormPartResultGQLModel(id=part.id, msg="fail")
     loader = getLoadersFromInfo(info).parts
     row = await loader.update(part)

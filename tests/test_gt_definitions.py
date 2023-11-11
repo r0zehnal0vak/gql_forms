@@ -49,9 +49,9 @@ test_query_item_type_page = createPageTest(tableName="formitemtypes", queryEndpo
 test_query_item_category_by_id = createByIdTest(tableName="formitemcategories", queryEndpoint="itemCategoryById")
 test_query_item_category_page = createPageTest(tableName="formitemcategories", queryEndpoint="itemCategoryPage")
 
-# test_resolve_request = createResolveReferenceTest('formrequests', 'RequestGQLModel', ['id', 'lastchange'])
-# test_resolve_section = createResolveReferenceTest('formsections', 'SectionGQLModel', ['id', 'lastchange'])
-# test_resolve_part = createResolveReferenceTest('formparts', 'PartGQLModel', ['id', 'lastchange', 'order'])
+test_resolve_request = createResolveReferenceTest('formrequests', 'RequestGQLModel', ['id', 'lastchange'])
+test_resolve_section = createResolveReferenceTest('formsections', 'FormSectionGQLModel', ['id', 'lastchange'])
+test_resolve_part = createResolveReferenceTest('formparts', 'FormPartGQLModel', ['id', 'lastchange', 'order'])
 
 
 test_form_insert = createFrontendQuery(query="""
@@ -295,7 +295,7 @@ async def test_large_query():
     user_id = f"{user_id}"
 
     query = '''query($user_id: UUID!){
-        requestsByCreator(id: $user_id) { 
+        result: requestsPage(where:{createdby: {_eq: $user_id}}) { 
         id
         lastchange
         creator {
@@ -314,7 +314,7 @@ async def test_large_query():
     print(resp)
     assert resp.errors is None
     data = resp.data
-    data = data['requestsByCreator']
+    data = data['result']
     data = data[0]
     #assert False
     #respdata = resp.data['eventById']

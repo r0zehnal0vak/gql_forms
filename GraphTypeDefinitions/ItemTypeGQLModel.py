@@ -6,6 +6,21 @@ import uuid
 from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
+from .BaseGQLModel import BaseGQLModel
+
+from GraphTypeDefinitions._GraphResolvers import (
+    resolve_id,
+    resolve_name,
+    resolve_name_en,
+    resolve_changedby,
+    resolve_created,
+    resolve_lastchange,
+    resolve_createdby,
+    createRootResolver_by_id,
+    createRootResolver_by_page,
+    createAttributeScalarResolver,
+    createAttributeVectorResolver
+)
 
 ItemCategoryGQLModel = Annotated["ItemCategoryGQLModel", strawberry.lazy(".ItemCategoryGQLModel")]
 
@@ -14,31 +29,26 @@ ItemCategoryGQLModel = Annotated["ItemCategoryGQLModel", strawberry.lazy(".ItemC
     name="FormItemTypeGQLModel",
     description="""Type representing an item type"""
 )
-class ItemTypeGQLModel:
+class ItemTypeGQLModel(BaseGQLModel):
     @classmethod
-    async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
-        loader = getLoadersFromInfo(info).itemtypes
-        result = await loader.load(id)
-        if result is not None:
-            result.__strawberry_definition__ = cls.__strawberry_definition__  # little hack :)
-        return result
+    def getLoader(cls, info):
+        return getLoadersFromInfo(info).itemtypes
+    
+    # @classmethod
+    # async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
+    # implementation is inherited
 
-    @strawberry.field(description="""Entity primary key""")
-    def id(self) -> uuid.UUID:
-        return self.id
-
-    @strawberry.field(description="""timestamp""")
-    def lastchange(self) -> datetime.datetime:
-        return self.lastchange
-
-    @strawberry.field(description="""Type name""")
-    def name(self) -> str:
-        return self.name
+    id = resolve_id
+    name = resolve_name
+    changedby = resolve_changedby
+    lastchange = resolve_lastchange
+    created = resolve_created
+    createdby = resolve_createdby
+    name_en = resolve_name_en
 
     @strawberry.field(description="""Type category""")
     async def category(self, info: strawberry.types.Info) -> typing.Optional["ItemCategoryGQLModel"]:
         from .ItemCategoryGQLModel import ItemCategoryGQLModel
-        #result = await ItemCategoryGQLModel(info, self.category_id)
         return await ItemCategoryGQLModel.resolve_reference(info=info, id=self.category_id)
     
 #############################################################
@@ -72,15 +82,17 @@ async def item_type_by_id(
 
 @strawberry.input(description="")
 class FormItemTypeInsertGQLModel:
-    name: str
-    id: typing.Optional[uuid.UUID] = None
+    name: str = strawberry.field(description="Item type name")
+    id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
+    createdby: strawberry.Private[uuid.UUID] = None 
 
 @strawberry.input(description="")
 class FormItemTypeUpdateGQLModel:
-    id: uuid.UUID
-    lastchange: datetime.datetime
-    name: typing.Optional[str] = None
+    id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
+    lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
+    name: typing.Optional[str] = strawberry.field(description="Item type name", default=None)
     order: typing.Optional[int] = None
+    changedby: strawberry.Private[uuid.UUID] = None
 
 
 @strawberry.type(description="")
@@ -95,6 +107,8 @@ class FormItemTypeResultGQLModel:
 
 @strawberry.mutation(description="")
 async def form_item_type_insert(self, info: strawberry.types.Info, item_type: FormItemTypeInsertGQLModel) -> FormItemTypeResultGQLModel:
+    user = getUserFromInfo(info)
+    item_type.createdby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).itemtypes
     row = await loader.insert(item_type)
     result = FormItemTypeResultGQLModel(msg="fail", id=None)
@@ -105,6 +119,8 @@ async def form_item_type_insert(self, info: strawberry.types.Info, item_type: Fo
 
 @strawberry.mutation
 async def form_item_type_update(self, info: strawberry.types.Info, item_type: FormItemTypeUpdateGQLModel) -> FormItemTypeResultGQLModel:
+    user = getUserFromInfo(info)
+    item_type.changedby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).itemtypes
     row = await loader.update(item_type)
     result = FormItemTypeResultGQLModel(msg="fail", id=None)

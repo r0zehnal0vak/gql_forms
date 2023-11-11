@@ -111,6 +111,50 @@ def prepareSelect(model, where: dict):
     result = baseStatement.filter(filterStatement)
     return result
 
+class AuthLoader(DataLoader):
+    query = """query()
+        {
+        "reps": [
+            {
+            "id": "13181566-afb0-11ed-9bd8-0242ac110002"
+            , "__typename": "RequestGQLModel"
+            }
+        ]
+        }    
+"""
+    q2 = """{
+        authorizationPage {
+            ... on AuthorizationGQLModel {
+            id
+            users {
+                accesslevel
+                user {
+                id
+                }
+            }
+            groups {
+                accesslevel
+                group {
+                id
+                }
+            }
+            roleTypes {
+                accesslevel
+                roleType {
+                id
+                }
+                group {
+                id
+                }
+            }
+            }
+        }
+        }
+"""
+
+
+    async def batch_load_fn(self, keys):
+        pass
 
 def createIdLoader(asyncSessionMaker, dbModel) :
 
@@ -197,11 +241,13 @@ def createIdLoader(asyncSessionMaker, dbModel) :
             statement = mainstmt.filter_by(**filters)
             return await self.execute_select(statement)
 
-        async def page(self, skip=0, limit=10, where=None):
+        async def page(self, skip=0, limit=10, where=None, extendedfilter=None):
             statement = mainstmt
             if where is not None:
                 statement = prepareSelect(dbModel, where)
             statement = statement.offset(skip).limit(limit)
+            if extendedfilter is not None:
+                statement = statement.filter_by(**extendedfilter)
             print(statement)
             return await self.execute_select(statement)
             

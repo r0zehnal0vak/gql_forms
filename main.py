@@ -56,7 +56,8 @@ async def initEngine(app: FastAPI):
 from GraphTypeDefinitions import schema
 
 app = FastAPI(lifespan=initEngine)
-
+import os
+roleUrlEndpoint = os.environ.get("ROLEURL", "http://localhost:8088/gql/")
 async def get_context():
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
     if asyncSessionMaker is None:
@@ -66,7 +67,8 @@ async def get_context():
     from utils.Dataloaders import createLoadersContext
     from GraphTypeDefinitions._GraphPermissions import ReadRoles, ReadRolesSync
     start = time.time_ns()
-    roles = await ReadRoles(roleUrlEndpoint="http://localhost:8088/gql/")
+    roles = []
+    #roles = await ReadRoles(roleUrlEndpoint=roleUrlEndpoint)
     #roles = ReadRolesSync(roleUrlEndpoint="http://localhost:8088/gql/")
     end = time.time_ns()
     print((end - start) / 1000000, "ms",  roles)
