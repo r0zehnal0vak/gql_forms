@@ -140,9 +140,9 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
             variable_values = {"rep": [{"__typename": f"{gqltype}", "id": f"{rowid}"}]}
 
             logging.info(f"query representations {query} with {variable_values}")
-            resp = await clientExecutor(query, variable_values)
+            resp = await clientExecutor(query, {**variable_values})
             testResult(resp)
-            resp = await schemaExecutor(query, variable_values)
+            resp = await schemaExecutor(query, {**variable_values})
             testResult(resp)
 
     return result_test

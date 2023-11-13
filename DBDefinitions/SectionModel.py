@@ -15,11 +15,12 @@ class SectionModel(BaseModel):
     name = Column(String)
 
     form_id = Column(ForeignKey("forms.id"), index=True)
-    order = Column(Integer)
+    order = Column(Integer, comment="order in parent entity")
     status = Column(String)
 
-    created = Column(DateTime, server_default=sqlalchemy.sql.func.now())
-    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now())
-    createdby = UUIDFKey(nullable=True)#Column(ForeignKey("users.id"), index=True, nullable=True)
-    changedby = UUIDFKey(nullable=True)#Column(ForeignKey("users.id"), index=True, nullable=True)
+    created = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="when this entity has been created")
+    lastchange = Column(DateTime, server_default=sqlalchemy.sql.func.now(), comment="timestamp / token")
+    createdby = UUIDFKey(nullable=True, comment="who's created the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
+    changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
+    rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")

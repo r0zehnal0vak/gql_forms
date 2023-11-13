@@ -29,7 +29,8 @@ dbmodels = {
 }
 
 import datetime
-
+import aiohttp
+import asyncio
 from aiodataloader import DataLoader
 from uoishelpers.resolvers import select, update, delete
 
@@ -111,51 +112,76 @@ def prepareSelect(model, where: dict):
     result = baseStatement.filter(filterStatement)
     return result
 
-class AuthLoader(DataLoader):
-    query = """query()
-        {
-        "reps": [
-            {
-            "id": "13181566-afb0-11ed-9bd8-0242ac110002"
-            , "__typename": "RequestGQLModel"
+class AuthorizationLoader(DataLoader):
+    query = """
+        query ($id: ID!) {
+            rolesOnUser(userId: $id) {
+                ...role
             }
-        ]
-        }    
-"""
-    q2 = """{
-        authorizationPage {
-            ... on AuthorizationGQLModel {
-            id
-            users {
-                accesslevel
-                user {
-                id
-                }
-            }
-            groups {
-                accesslevel
-                group {
-                id
-                }
-            }
-            roleTypes {
-                accesslevel
-                roleType {
-                id
-                }
-                group {
-                id
-                }
-            }
+            rolesOnGroup(groupId: $id) {
+                ...role
             }
         }
+
+        fragment role on RoleGQLModel {
+            valid
+            roletype { id }
+            user { id }
+            group { id }
         }
-"""
+    """
+    roleUrlEndpoint="http://localhost:8088/gql/"
+    def __init__(self,
+        roleUrlEndpoint=roleUrlEndpoint,
+        query=query,
+        demo=True):
+        super().__init__(cache=True)
+        self.roleUrlEndpoint = roleUrlEndpoint
+        self.query = query
+        self.demo = demo
+
+
+    async def _load(self, id):
+        variables = {"id": f"{id}"}
+        headers = {}
+        json = {
+            "query": self.query,
+            "variables": variables
+        }
+        roleUrlEndpoint=self.roleUrlEndpoint
+        async with aiohttp.ClientSession() as session:
+            print(f"query {roleUrlEndpoint} for json={json}")
+            async with session.post(url=roleUrlEndpoint, json=json, headers=headers) as resp:
+                print(resp.status)
+                if resp.status != 200:
+                    text = await resp.text()
+                    print(text)
+                    return []
+                else:
+                    respJson = await resp.json()
+
+        print(respJson)
+        
+        assert respJson.get("errors", None) is None
+        respdata = respJson.get("data", None)
+        assert respdata is not None
+        rolesOnUser = respdata.get("rolesOnUser", None)
+        rolesOnGroup = respdata.get("rolesOnGroup", None)
+        assert rolesOnUser is not None
+        assert rolesOnGroup is not None
+        
+        return [*rolesOnUser, *rolesOnGroup]
 
 
     async def batch_load_fn(self, keys):
-        pass
-
+        #print('batch_load_fn', keys, flush=True)
+        reducedkeys = set(keys)
+        awaitables = (self._load(key) for key in reducedkeys)
+        results = await asyncio.gather(*awaitables)
+        indexedResult = {key:result for key, result in zip(reducedkeys, results)}
+        results = [indexedResult[key] for key in keys]
+        return results
+    
 def createIdLoader(asyncSessionMaker, dbModel) :
 
     mainstmt = select(dbModel)
@@ -258,6 +284,7 @@ def createIdLoader(asyncSessionMaker, dbModel) :
     return Loader(cache=True)
 
 class Loaders:
+    authorizations = None
     requests = None
     histories = None
     forms = None
@@ -272,6 +299,12 @@ class Loaders:
 
 def createLoaders(asyncSessionMaker, models=dbmodels) -> Loaders:
     class Loaders:
+
+        @property
+        @cache
+        def authorizations(self):
+            return AuthorizationLoader()
+
         @property
         @cache
         def requests(self):

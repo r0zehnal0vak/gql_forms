@@ -53,6 +53,13 @@ class RequestGQLModel(BaseGQLModel):
     createdby = resolve_createdby
     name_en = resolve_name_en
 
+    @strawberry.field(
+        description="""Permitted attribute""",
+        permission_classes=[RoleBasedPermission(roles="rector")]
+        )
+    def permitted() -> str:
+        return "OK"
+
     @strawberry.field(description="""Request's time of last update""")
     def creator(self) -> typing.Optional["UserGQLModel"]:
         from .externals import UserGQLModel
