@@ -59,7 +59,7 @@ class ItemGQLModel(BaseGQLModel):
 
     @strawberry.field(description="""Item's order""")
     def order(self) -> int:
-        return self.order
+        return self.order if self.order else 0
 
     @strawberry.field(description="""Item's value """)
     def value(self) -> str:
@@ -74,7 +74,7 @@ class ItemGQLModel(BaseGQLModel):
     @strawberry.field(description="Retrieves the item type")
     async def type(self, info: strawberry.types.Info) -> typing.Optional["ItemTypeGQLModel"]:
         from .ItemTypeGQLModel import ItemTypeGQLModel
-        result = await ItemTypeGQLModel.resolve_reference(info=info, id=self.type_id)
+        result = None if self.type_id is None else await ItemTypeGQLModel.resolve_reference(info=info, id=self.type_id)
         return result
 
 #############################################################

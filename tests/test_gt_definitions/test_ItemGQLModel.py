@@ -19,7 +19,7 @@ from ..gqlshared import (
 test_reference_items = createResolveReferenceTest(tableName='formitems', gqltype='FormItemGQLModel', attributeNames=["id", "name", "lastchange"])
 
 test_query_item_by_id = createByIdTest(tableName="formitems", queryEndpoint="formItemById")
-
+test_query_item_page = createPageTest(tableName="formitems", queryEndpoint="formItemPage")
 
 test_item_insert = createFrontendQuery(query="""
     mutation($id: UUID!, $name: String!, $partId: UUID!) { 
@@ -29,6 +29,9 @@ test_item_insert = createFrontendQuery(query="""
             item {
                 id
                 name
+                order
+                type { id }
+                part { id }
             }
         }
     }

@@ -29,7 +29,7 @@ RequestGQLModel = Annotated["RequestGQLModel", strawberry.lazy(".RequestGQLModel
 @strawberry.federation.type(
     keys=["id"], 
     name="RequestHistoryGQLModel",
-    description="""Entity representing a request history item"""
+    description="""Entity which stores a history of form evolution during a request. This allows to recall form changes."""
 )
 class HistoryGQLModel(BaseGQLModel):
     """

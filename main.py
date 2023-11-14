@@ -74,6 +74,9 @@ graphql_app = GraphQLRouter(
 
 app.include_router(graphql_app, prefix="/gql")
 
+from doc import attachVoyager
+attachVoyager(app, path="/gql/doc")
+
 print("All initialization is done")
 # @app.get('/hello')
 # def hello():

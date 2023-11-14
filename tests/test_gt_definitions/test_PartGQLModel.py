@@ -28,6 +28,7 @@ test_part_insert = createFrontendQuery(query="""
             part {
                 id
                 name
+                items { id }
             }
         }
     }

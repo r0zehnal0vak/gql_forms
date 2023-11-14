@@ -71,15 +71,15 @@ form_category_by_id = createRootResolver_by_id(
 #     return result
 
 
-@strawberry.field(description="Retrieves the form categories")
-async def form_category_page(
-    self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
-    where: typing.Optional[FormCategoryWhereFilter] = None
-) -> typing.List[FormCategoryGQLModel]:
-    wf = None if where is None else strawberry.asdict(where)
-    loader = getLoadersFromInfo(info).formcategories
-    result = await loader.page(skip=skip, limit=limit, where=wf)
-    return result
+# @strawberry.field(description="Retrieves the form categories")
+# async def form_category_page(
+#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+#     where: typing.Optional[FormCategoryWhereFilter] = None
+# ) -> typing.List[FormCategoryGQLModel]:
+#     wf = None if where is None else strawberry.asdict(where)
+#     loader = getLoadersFromInfo(info).formcategories
+#     result = await loader.page(skip=skip, limit=limit, where=wf)
+#     return result
 
 
 form_category_page = createRootResolver_by_page(

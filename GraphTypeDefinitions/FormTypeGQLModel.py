@@ -24,6 +24,9 @@ from GraphTypeDefinitions._GraphResolvers import (
 
 FormCategoryGQLModel = Annotated["FormCategoryGQLModel", strawberry.lazy(".FormCategoryGQLModel")]
 
+
+forms = createAttributeVectorResolver()
+
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a category of form types"""
 )

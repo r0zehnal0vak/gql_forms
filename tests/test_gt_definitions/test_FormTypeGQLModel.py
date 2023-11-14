@@ -29,6 +29,7 @@ test_insert_form_type = createFrontendQuery(
             type {
                 id
                 name
+                category { id }
             }
         }
     }""",

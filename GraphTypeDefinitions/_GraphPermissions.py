@@ -136,47 +136,47 @@ rolelist = [
         }
     ]
 
-async def getRoles(userId="", roleUrlEndpoint="http://localhost:8088/gql/", isDEMO=True):
-    query = """query($userid: UUID!){
-            roles: roleByUser(userId: $userid) {
-                id
-                valid
-                roletype { id }
-                group { id }
-                user { id }
-            }
-        }
-"""
-    variables = {"userid": userId}
-    headers = {}
-    json = {
-        "query": query,
-        "variables": variables
-    }
+# async def getRoles(userId="", roleUrlEndpoint="http://localhost:8088/gql/", isDEMO=True):
+#     query = """query($userid: UUID!){
+#             roles: roleByUser(userId: $userid) {
+#                 id
+#                 valid
+#                 roletype { id }
+#                 group { id }
+#                 user { id }
+#             }
+#         }
+# """
+#     variables = {"userid": userId}
+#     headers = {}
+#     json = {
+#         "query": query,
+#         "variables": variables
+#     }
 
-    print("roleUrlEndpoint", roleUrlEndpoint)
-    async with aiohttp.ClientSession() as session:
-        print(f"query {roleUrlEndpoint} for json={json}")
-        async with session.post(url=roleUrlEndpoint, json=json, headers=headers) as resp:
-            print(resp.status)
-            if resp.status != 200:
-                text = await resp.text()
-                print(text)
-                return []
-            else:
-                respJson = await resp.json()
+#     print("roleUrlEndpoint", roleUrlEndpoint)
+#     async with aiohttp.ClientSession() as session:
+#         print(f"query {roleUrlEndpoint} for json={json}")
+#         async with session.post(url=roleUrlEndpoint, json=json, headers=headers) as resp:
+#             print(resp.status)
+#             if resp.status != 200:
+#                 text = await resp.text()
+#                 print(text)
+#                 return []
+#             else:
+#                 respJson = await resp.json()
 
-    print(respJson)
+#     print(respJson)
     
-    assert respJson.get("errors", None) is None
-    respdata = respJson.get("data", None)
-    assert respdata is not None
-    roles = respdata.get("roles", None)
-    assert roles is not None
-    print("roles", roles)
-    return [*roles]
+#     assert respJson.get("errors", None) is None
+#     respdata = respJson.get("data", None)
+#     assert respdata is not None
+#     roles = respdata.get("roles", None)
+#     assert roles is not None
+#     print("roles", roles)
+#     return [*roles]
 
-    pass
+#     pass
 
 import requests
 
@@ -212,61 +212,61 @@ if not isDEMO:
 
 roleIndex = { role["name_en"]: role["id"] for role in rolelist }
 
-async def ReadRoles(
-    userId="2d9dc5ca-a4a2-11ed-b9df-0242ac120003", 
-    roleUrlEndpoint="http://localhost:8088/gql/",
-    demo=True):
+# async def ReadRoles(
+#     userId="2d9dc5ca-a4a2-11ed-b9df-0242ac120003", 
+#     roleUrlEndpoint="http://localhost:8088/gql/",
+#     demo=True):
     
-    query = """query($userid: UUID!){
-            roles: roleByUser(userId: $userid) {
-                id
-                valid
-                roletype { id }
-                group { id }
-                user { id }
-            }
-        }
-"""
-    variables = {"userid": userId}
-    headers = {}
-    json = {
-        "query": query,
-        "variables": variables
-    }
+#     query = """query($userid: UUID!){
+#             roles: roleByUser(userId: $userid) {
+#                 id
+#                 valid
+#                 roletype { id }
+#                 group { id }
+#                 user { id }
+#             }
+#         }
+# """
+#     variables = {"userid": userId}
+#     headers = {}
+#     json = {
+#         "query": query,
+#         "variables": variables
+#     }
 
-    print("roleUrlEndpoint", roleUrlEndpoint)
-    async with aiohttp.ClientSession() as session:
-        print(f"query {roleUrlEndpoint} for json={json}")
-        async with session.post(url=roleUrlEndpoint, json=json, headers=headers) as resp:
-            print(resp.status)
-            if resp.status != 200:
-                text = await resp.text()
-                print(text)
-                return []
-            else:
-                respJson = await resp.json()
+#     print("roleUrlEndpoint", roleUrlEndpoint)
+#     async with aiohttp.ClientSession() as session:
+#         print(f"query {roleUrlEndpoint} for json={json}")
+#         async with session.post(url=roleUrlEndpoint, json=json, headers=headers) as resp:
+#             print(resp.status)
+#             if resp.status != 200:
+#                 text = await resp.text()
+#                 print(text)
+#                 return []
+#             else:
+#                 respJson = await resp.json()
 
-    print(respJson)
+#     print(respJson)
     
-    assert respJson.get("errors", None) is None
-    respdata = respJson.get("data", None)
-    assert respdata is not None
-    roles = respdata.get("roles", None)
-    assert roles is not None
-    print("roles", roles)
-    return [*roles]
+#     assert respJson.get("errors", None) is None
+#     respdata = respJson.get("data", None)
+#     assert respdata is not None
+#     roles = respdata.get("roles", None)
+#     assert roles is not None
+#     print("roles", roles)
+#     return [*roles]
 
-def WhereAuthorized(userRoles, roleIdsNeeded=[]):
+# def WhereAuthorized(userRoles, roleIdsNeeded=[]):
     
-    # 👇 filtrace roli, ktere maji pozadovanou uroven autorizace
-    roletypesFiltered = filter(lambda item: item["roletype"]["id"] in roleIdsNeeded, userRoles)
-    # 👇 odvozeni, pro ktere skupiny ma tazatel patricnou uroven autorizace
-    groupsAuthorizedIds = map(lambda item: item["group"]["id"], roletypesFiltered)
-    # 👇 konverze na list
-    groupsAuthorizedIds = list(groupsAuthorizedIds)
-    # cokoliv se tyka techto skupin, na to autor muze
-    print("groupsAuthorizedIds", groupsAuthorizedIds)
-    return groupsAuthorizedIds
+#     # 👇 filtrace roli, ktere maji pozadovanou uroven autorizace
+#     roletypesFiltered = filter(lambda item: item["roletype"]["id"] in roleIdsNeeded, userRoles)
+#     # 👇 odvozeni, pro ktere skupiny ma tazatel patricnou uroven autorizace
+#     groupsAuthorizedIds = map(lambda item: item["group"]["id"], roletypesFiltered)
+#     # 👇 konverze na list
+#     groupsAuthorizedIds = list(groupsAuthorizedIds)
+#     # cokoliv se tyka techto skupin, na to autor muze
+#     print("groupsAuthorizedIds", groupsAuthorizedIds)
+#     return groupsAuthorizedIds
 
 @cache
 def RolesToList(roles: str = ""):
@@ -276,7 +276,7 @@ def RolesToList(roles: str = ""):
     return roleIdsNeeded
 
 from utils.Dataloaders import getLoadersFromInfo
-
+from ._RBACObjectGQLModel import RBACObjectGQLModel
 @cache
 def RoleBasedPermission(roles: str = ""):
     roleIdsNeeded = RolesToList(roles)
@@ -287,20 +287,6 @@ def RoleBasedPermission(roles: str = ""):
             self, source, info: strawberry.types.Info, **kwargs
         ) -> bool:
             
-            # context = info.context
-            # userRoles = context["userroles"]
-
-            # # 👇 filtrace roli, ktere maji pozadovanou uroven autorizace
-            # roletypesFiltered = filter(lambda item: item["roletype"]["id"] in roleIdsNeeded, userRoles)
-            # # 👇 odvozeni, pro ktere skupiny ma tazatel patricnou uroven autorizace
-            # groupsAuthorizedIds = map(lambda item: item["group"]["id"], roletypesFiltered)
-            # # 👇 konverze na list
-            # groupsAuthorizedIds = list(groupsAuthorizedIds)
-            # # cokoliv se tyka techto skupin, na to autor muze
-            # print("groupsAuthorizedIds", groupsAuthorizedIds)
-            # return groupsAuthorizedIds
-
-
             print("RolebasedPermission", self) ##
             print("RolebasedPermission", source) ## self as in GQLModel
             print("RolebasedPermission", kwargs)
@@ -309,9 +295,8 @@ def RoleBasedPermission(roles: str = ""):
                 print("RolebasedPermission hasattr 'rbacobject'")
 
             rbacobject = getattr(source, "rbacobject", "None f8089aa6-2c4a-4746-9503-105fcc5d054c")
-            loader = getLoadersFromInfo(info).authorizations
             rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
-            authorizedroles = await loader.load(rbacobject)
+            authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)
 
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)
@@ -328,13 +313,13 @@ def RoleBasedPermission(roles: str = ""):
     return RolebasedPermission
 
 
-class UserGDPRPermission(BasePermission):
-    message = "User is not authenticated"
+# class UserGDPRPermission(BasePermission):
+#     message = "User is not authenticated"
 
-    async def has_permission(
-        self, source, info: strawberry.types.Info, **kwargs
-    ) -> bool:
-        print("UserGDPRPermission", source)
-        print("UserGDPRPermission", self)
-        print("UserGDPRPermission", kwargs)
-        return True
+#     async def has_permission(
+#         self, source, info: strawberry.types.Info, **kwargs
+#     ) -> bool:
+#         print("UserGDPRPermission", source)
+#         print("UserGDPRPermission", self)
+#         print("UserGDPRPermission", kwargs)
+#         return True

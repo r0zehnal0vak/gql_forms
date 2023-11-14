@@ -28,6 +28,7 @@ test_insert_section = createFrontendQuery(
             section {
                 id
                 name
+                order
                 form {
                     id
                 }

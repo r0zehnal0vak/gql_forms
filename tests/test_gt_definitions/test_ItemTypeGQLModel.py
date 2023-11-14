@@ -31,6 +31,7 @@ test_item_type_insert = createFrontendQuery(query="""
             itemType {
                 id
                 name
+                category { id }
             }
         }
     }

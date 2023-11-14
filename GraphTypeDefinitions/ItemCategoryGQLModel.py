@@ -92,7 +92,7 @@ class FormItemCategoryResultGQLModel:
     msg: str
 
     @strawberry.field(description="")
-    async def item_category(self, info: strawberry.types.Info) -> ItemCategoryGQLModel:
+    async def category(self, info: strawberry.types.Info) -> ItemCategoryGQLModel:
         result = await ItemCategoryGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
@@ -100,9 +100,9 @@ class FormItemCategoryResultGQLModel:
 async def item_category_insert(self, info: strawberry.types.Info, item_category: FormItemCategoryInsertGQLModel) -> FormItemCategoryResultGQLModel:
     user = getUserFromInfo(info)
     item_category.createdby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).itemcategories
     row = await loader.insert(item_category)
-    result = FormItemCategoryResultGQLModel()
+    result = FormItemCategoryResultGQLModel(id=row.id, msg="ok")
     result.msg = "ok"
     result.id = row.id
     return result
@@ -111,9 +111,9 @@ async def item_category_insert(self, info: strawberry.types.Info, item_category:
 async def item_category_update(self, info: strawberry.types.Info, item_category: FormItemCategoryUpdateGQLModel) -> FormItemCategoryResultGQLModel:
     user = getUserFromInfo(info)
     item_category.changedby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).itemcategories
     row = await loader.update(item_category)
-    result = FormItemCategoryResultGQLModel()
+    result = FormItemCategoryResultGQLModel(id=item_category.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = item_category.id
     return result   

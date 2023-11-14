@@ -51,7 +51,7 @@ class SectionGQLModel(BaseGQLModel):
 
     @strawberry.field(description="""Section's order""")
     def order(self) -> int:
-        return self.order
+        return self.order if self.order else 0
 
     @strawberry.field(description="Retrieves the parts related to this section")
     async def parts(self, info: strawberry.types.Info) -> typing.List["PartGQLModel"]:

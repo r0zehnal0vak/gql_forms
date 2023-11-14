@@ -31,6 +31,7 @@ test_form_insert = createFrontendQuery(query="""
             form {
                 id
                 name
+                type { id }
             }
         }
     }

@@ -20,3 +20,5 @@ class GroupGQLModel:
     id: uuid.UUID = strawberry.federation.field(external=True)
     resolve_reference = resolve_reference
 
+
+

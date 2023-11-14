@@ -30,6 +30,9 @@ test_insert_request = createFrontendQuery(
             request {
                 id
                 name
+                creator { id }
+                histories { id }
+                
             }
         }
     }""",
