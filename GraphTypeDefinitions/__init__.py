@@ -75,20 +75,21 @@ class Query:
     from .ItemGQLModel import (
         item_by_id, item_page
     )
-    item_by_id = item_by_id
-    item_page = item_page
+    form_item_by_id = item_by_id
+    form_item_page = item_page
 
     from .ItemTypeGQLModel import (
         item_type_by_id, item_type_page
     )
-    item_type_by_id = item_type_by_id
-    item_type_page = item_type_page
+    form_item_type_by_id = item_type_by_id
+    form_item_type_page = item_type_page
 
     from .ItemCategoryGQLModel import (
         item_category_by_id, item_category_page
     )
     item_category_by_id = item_category_by_id
     item_category_page = item_category_page
+
 
 ###########################################################################################################################
 #
@@ -138,6 +139,29 @@ class Mutation:
     form_category_insert = form_category_insert
     form_category_update = form_category_update
 
+    from .SectionGQLModel import (
+        section_insert, section_update
+    )
+    form_section_insert = section_insert
+    form_section_update = section_update
+
+    from .RequestGQLModel import (
+        form_request_insert, form_request_update
+    )
+    form_request_insert = form_request_insert
+    form_request_update = form_request_update
+
+    from .FormTypeGQLModel import (
+        form_type_insert, form_type_update
+    )
+    form_type_insert = form_type_insert
+    form_type_update = form_type_update
+
+    from .HistoryGQLModel import (
+        history_insert, history_update
+    )
+    form_history_insert = history_insert
+    form_history_update = history_update
 
 ###########################################################################################################################
 #

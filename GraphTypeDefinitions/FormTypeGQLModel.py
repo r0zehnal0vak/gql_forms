@@ -15,6 +15,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -44,6 +45,7 @@ class FormTypeGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(description="""Request's time of last update""")
     async def category(self, info: strawberry.types.Info) -> typing.Optional["FormCategoryGQLModel"]:
@@ -112,7 +114,7 @@ class FormTypeResultGQLModel:
     msg: str
 
     @strawberry.field(description="")
-    async def form_type(self, info: strawberry.types.Info) -> FormTypeGQLModel:
+    async def type(self, info: strawberry.types.Info) -> FormTypeGQLModel:
         result = await FormTypeGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
@@ -120,9 +122,9 @@ class FormTypeResultGQLModel:
 async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTypeInsertGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.createdby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).formtypes
     row = await loader.insert(form_type)
-    result = FormTypeResultGQLModel()
+    result = FormTypeResultGQLModel(id=row.id, msg="ok")
     result.msg = "ok"
     result.id = row.id
     return result
@@ -131,9 +133,9 @@ async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTyp
 async def form_type_update(self, info: strawberry.types.Info, form_type: FormTypeUpdateGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.changedby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).formtypes
     row = await loader.update(form_type)
-    result = FormTypeResultGQLModel()
+    result = FormTypeResultGQLModel(id=form_type.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = form_type.id
     return result   

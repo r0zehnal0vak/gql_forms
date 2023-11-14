@@ -17,6 +17,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -52,6 +53,7 @@ class RequestGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(
         description="""Permitted attribute""",
@@ -112,8 +114,10 @@ requests_page = createRootResolver_by_page(
 @strawberry.input(description="")
 class FormRequestInsertGQLModel:
     name: str = strawberry.field(description="Request name")
+    #form_type_id: uuid.UUID = strawberry.field(description="Form type which will be initialized")
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     createdby: strawberry.Private[uuid.UUID] = None 
+    rbacobject: strawberry.Private[uuid.UUID] = None
 
 @strawberry.input(description="")
 class FormRequestUpdateGQLModel:
@@ -135,9 +139,10 @@ class FormRequestResultGQLModel:
 async def form_request_insert(self, info: strawberry.types.Info, request: FormRequestInsertGQLModel) -> FormRequestResultGQLModel:
     user = getUserFromInfo(info)
     request.createdby = uuid.UUID(user["id"])
+    request.rbacobject = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).requests
     row = await loader.insert(request)
-    result = FormRequestInsertGQLModel()
+    result = FormRequestResultGQLModel(id=row.id, msg="ok")
     result.msg = "ok"
     result.id = row.id
     return result
@@ -148,7 +153,7 @@ async def form_request_update(self, info: strawberry.types.Info, request: FormRe
     request.changedby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).requests
     row = await loader.update(request)
-    result = FormRequestUpdateGQLModel()
+    result = FormRequestResultGQLModel(id=request.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = request.id
     return result   

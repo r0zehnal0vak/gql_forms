@@ -16,6 +16,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -46,6 +47,7 @@ class PartGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(description="""Part's order""")
     def order(self) -> int:

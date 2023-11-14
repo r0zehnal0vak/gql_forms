@@ -16,6 +16,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -50,6 +51,7 @@ class HistoryGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(description="""Request which history belongs to""")
     async def request(self, info: strawberry.types.Info) -> typing.Optional["RequestGQLModel"]:
@@ -108,9 +110,9 @@ class HistoryResultGQLModel:
 async def history_insert(self, info: strawberry.types.Info, history: HistoryInsertGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.createdby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).histories
     row = await loader.insert(history)
-    result = HistoryResultGQLModel()
+    result = HistoryResultGQLModel(id=row.id, msg="ok")
     result.msg = "ok"
     result.id = row.id
     return result
@@ -119,9 +121,9 @@ async def history_insert(self, info: strawberry.types.Info, history: HistoryInse
 async def history_update(self, info: strawberry.types.Info, history: HistoryUpdateGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.changedby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).histories
     row = await loader.update(history)
-    result = HistoryResultGQLModel()
+    result = HistoryResultGQLModel(id=history.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = history.id
     return result   

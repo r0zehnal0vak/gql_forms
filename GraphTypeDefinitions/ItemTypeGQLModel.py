@@ -16,6 +16,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -45,6 +46,7 @@ class ItemTypeGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(description="""Type category""")
     async def category(self, info: strawberry.types.Info) -> typing.Optional["ItemCategoryGQLModel"]:

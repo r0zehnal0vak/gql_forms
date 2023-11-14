@@ -14,6 +14,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -41,7 +42,7 @@ class FormCategoryGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
-
+    rbacobject = resolve_rbacobject
 
 #############################################################
 #
@@ -128,7 +129,7 @@ async def form_category_insert(self, info: strawberry.types.Info, form_category:
     form_category.createdby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).formcategories
     row = await loader.insert(form_category)
-    result = FormCategoryResultGQLModel()
+    result = FormCategoryResultGQLModel(id=row.id, msg="ok")
     result.msg = "ok"
     result.id = row.id
     return result
@@ -139,7 +140,7 @@ async def form_category_update(self, info: strawberry.types.Info, form_category:
     form_category.changedby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).formcategories
     row = await loader.update(form_category)
-    result = FormCategoryResultGQLModel()
+    result = FormCategoryResultGQLModel(id=form_category.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = form_category.id
     return result   

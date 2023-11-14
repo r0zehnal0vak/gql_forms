@@ -16,6 +16,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_created,
     resolve_lastchange,
     resolve_createdby,
+    resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
     createAttributeScalarResolver,
@@ -46,6 +47,7 @@ class SectionGQLModel(BaseGQLModel):
     created = resolve_created
     createdby = resolve_createdby
     name_en = resolve_name_en
+    rbacobject = resolve_rbacobject
 
     @strawberry.field(description="""Section's order""")
     def order(self) -> int:
@@ -107,20 +109,21 @@ class SectionResultGQLModel:
 async def section_insert(self, info: strawberry.types.Info, section: SectionInsertGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.createdby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).sections
     row = await loader.insert(section)
-    result = SectionResultGQLModel()
+    result = SectionResultGQLModel(id=section.id, msg="fail")
     result.msg = "ok"
     result.id = row.id
+    print("section_insert", result)
     return result
 
 @strawberry.mutation(description="")
 async def section_update(self, info: strawberry.types.Info, section: SectionUpdateGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.changedby = uuid.UUID(user["id"])
-    loader = getLoadersFromInfo(info).requests
+    loader = getLoadersFromInfo(info).sections
     row = await loader.update(section)
-    result = SectionResultGQLModel()
+    result = SectionResultGQLModel(id=section.id, msg="fail")
     result.msg = "fail" if row is None else "ok"
     result.id = section.id
     return result   

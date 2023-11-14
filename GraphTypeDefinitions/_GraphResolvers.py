@@ -4,6 +4,7 @@ import datetime
 import typing
 
 UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".externals")]
+GroupGQLModel = typing.Annotated["GroupGQLModel", strawberry.lazy(".externals")]
 
 @strawberry.field(description="""Entity primary key""")
 def resolve_id(self) -> uuid.UUID:
@@ -12,6 +13,10 @@ def resolve_id(self) -> uuid.UUID:
 @strawberry.field(description="""Name """)
 def resolve_name(self) -> str:
     return self.name
+
+@strawberry.field(description="""English name""")
+def resolve_name_en(self) -> str:
+    return self.name_en
 
 @strawberry.field(description="""Time of last update""")
 def resolve_lastchange(self) -> datetime.datetime:
@@ -33,9 +38,13 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
     result = None if self.changedby is None else await UserGQLModel.resolve_reference(self.changedby)
     return result
 
-@strawberry.field(description="""English name""")
-def resolve_name_en(self) -> str:
-    return self.name_en
+
+
+@strawberry.field(description="""Who made last change""")
+def resolve_rbacobject(self) -> typing.Optional[uuid.UUID]:
+    return self.rbacobject
+
+
 
 def createAttributeScalarResolver(
     scalarType: None = None, 
