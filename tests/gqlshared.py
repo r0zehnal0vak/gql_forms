@@ -3,8 +3,9 @@ import sqlalchemy
 import uuid
 import sys
 import asyncio
-
+import json
 import pytest
+import re
 
 from GraphTypeDefinitions import schema
 
@@ -17,10 +18,38 @@ from .shared import (
 )
 from .client import CreateClientFunction
 
+def append(
+        queryname="queryname",
+        query=None, mutation=None, variables={}):
+    with open("./queries.txt", "a", encoding="utf-8") as file:
+        if (query is not None) and ("mutation" in query):
+            jsonData = {
+                "query": None,
+                "mutation": query,
+                "variables": variables
+            }
+        else:
+            jsonData = {
+                "query": query,
+                "mutation": mutation,
+                "variables": variables
+            }
+        rpattern = r"((?:[a-zA-Z]+Insert)|(?:[a-zA-Z]+Update)|(?:[a-zA-Z]+ById)|(?:[a-zA-Z]+Page))"
+        qstring = query if query else mutation
+        querynames = re.findall(rpattern, qstring)
+        print(querynames)
+        queryname = queryname if len(querynames) < 1 else "query_" + querynames[0]
+        if jsonData.get("query", None) is None:
+            queryname = queryname.replace("query", "mutation")
+        queryname = queryname + f"_{query.__hash__()}"
+        queryname = queryname.replace("-", "")
+        line = f'"{queryname}": {json.dumps(jsonData)}, \n'
+        file.write(line)
+
 def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
     async def result_test():
-
+        
         def testResult(resp):
             print("response", resp)
             errors = resp.get("errors", None)
@@ -45,6 +74,7 @@ def createByIdTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         variable_values = {"id": f'{datarow["id"]}'}
         
+        append(queryname=f"{queryEndpoint}_{tableName}", query=query, variables=variable_values)        
         logging.debug(f"query for {query} with {variable_values}")
 
         resp = await schemaExecutor(query, variable_values)
@@ -80,6 +110,8 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
         content = "{" + ", ".join(attributeNames) + "}"
         query = "query{" f"{queryEndpoint}" f"{content}" "}"
+
+        append(queryname=f"{queryEndpoint}_{tableName}", query=query)
 
         resp = await schemaExecutor(query)
         testResult(resp)
@@ -118,15 +150,15 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
         for row in table:
             rowid = f"{row['id']}"
 
-            query = (
-                'query($id: UUID!) { _entities(representations: [{ __typename: '+ f'"{gqltype}", id: $id' + 
-                ' }])' +
-                '{' +
-                f'...on {gqltype}' + content +
-                '}' + 
-                '}')
+            # query = (
+            #     'query($id: UUID!) { _entities(representations: [{ __typename: '+ f'"{gqltype}", id: $id' + 
+            #     ' }])' +
+            #     '{' +
+            #     f'...on {gqltype}' + content +
+            #     '}' + 
+            #     '}')
 
-            variable_values = {"id": rowid}
+            # variable_values = {"id": rowid}
 
             query = ("query($rep: [_Any!]!)" + 
                 "{" +
@@ -145,6 +177,8 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
             resp = await schemaExecutor(query, {**variable_values})
             testResult(resp)
 
+        append(queryname=f"{gqltype}_representation", query=query)
+
     return result_test
 
 def createFrontendQuery(query="{}", variables={}, asserts=[]):
@@ -156,6 +190,9 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
         context_value = createContext(async_session_maker)
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
+
+        append(queryname=f"query", query=query, variables=variables)
+
         resp = await schema.execute(
             query=query, 
             variable_values=variables, 
@@ -201,6 +238,9 @@ def createUpdateQuery(query="{}", variables={}, tableName=""):
         context_value = createContext(async_session_maker)
         logging.debug(f"query for {query} with {variables}")
         print(f"query for {query} with {variables}")
+
+        append(queryname=f"query_{tableName}", mutation=query, variables=variables)
+
         resp = await schema.execute(
             query=query, 
             variable_values=variables, 
