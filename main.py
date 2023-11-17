@@ -4,6 +4,12 @@ import typing
 import logging
 import asyncio
 
+import logging
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
+    datefmt='%Y-%m-%dT%I:%M:%S')
+
 from fastapi import FastAPI
 import strawberry
 from strawberry.fastapi import GraphQLRouter
@@ -82,8 +88,15 @@ print("All initialization is done")
 # def hello():
 #    return {'hello': 'world'}
 
-###########################################################################################################################
-#
-# pokud jste pripraveni testovat GQL funkcionalitu, rozsirte apollo/server.js
-#
-###########################################################################################################################
+
+
+from starlette.authentication import (
+    AuthCredentials, AuthenticationBackend, AuthenticationError
+)
+from starlette.middleware.authentication import AuthenticationMiddleware
+
+class BasicAuthBackend(AuthenticationBackend):
+    async def authenticate(self, conn):
+        return AuthCredentials(["authenticated"]), {"name": "John", "surname": "Newbie"}
+
+app.add_middleware(AuthenticationMiddleware, backend=BasicAuthBackend())

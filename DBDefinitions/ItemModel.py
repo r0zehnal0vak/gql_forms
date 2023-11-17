@@ -1,6 +1,7 @@
 import sqlalchemy
 from sqlalchemy.schema import Column
 from sqlalchemy import Uuid, String, DateTime, ForeignKey, Integer
+from sqlalchemy.orm import relationship
 
 from .uuid import UUIDFKey, UUIDColumn
 from .base import BaseModel
@@ -9,11 +10,11 @@ class ItemModel(BaseModel):
     __tablename__ = "formitems"
 
     id = UUIDColumn()
-    name = Column(String, comment="name of category")
-    name_en = Column(String, comment="english name of category")
+    name = Column(String, comment="name of value")
+    name_en = Column(String, comment="english name of value")
     
     order = Column(Integer, comment="order in parent entity")
-    value = Column(String, comment="item value, with name it is named value")
+    value = Column(String, comment="item value, together with name it is named value")
 
     part_id = Column(ForeignKey("formparts.id"), index=True)
     type_id = Column(ForeignKey("formitemtypes.id"), index=True)
@@ -24,3 +25,6 @@ class ItemModel(BaseModel):
     changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")
+
+    part = relationship("PartModel", back_populates="items", uselist=False)
+    type = relationship("ItemTypeModel", back_populates="items", uselist=False)

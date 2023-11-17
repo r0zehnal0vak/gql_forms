@@ -301,6 +301,8 @@ def RoleBasedPermission(roles: str = ""):
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)
             print("RolebasedPermission.authorized", authorizedroles)
+            user_id = ""
+            s = [r for r in authorizedroles if (r["roletype"]["id"] in roleIdsNeeded)and(r["user"]["id"] == user_id)]
             s = [r for r in authorizedroles if r["roletype"]["id"] in roleIdsNeeded]
             if len(s) > 0:
                 print("RolebasedPermission.access allowed")

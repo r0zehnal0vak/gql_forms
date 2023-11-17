@@ -52,21 +52,18 @@ class FormGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Request's validity""")
+    @strawberry.field(description="""Form's validity""")
     def valid(self) -> bool:
         return self.valid
 
-    @strawberry.field(description="""Request's status""")
-    def status(self) -> typing.Optional[bool]:
+    @strawberry.field(description="""Form's status""")
+    def status(self) -> typing.Optional[str]:
         return self.status
 
-    @strawberry.field(description="Retrieves the sections related to this form (form has several sections)")
+    @strawberry.field(description="Retrieves the sections related to this form (form has several sections), form->section->part->item")
     async def sections(
         self, info: strawberry.types.Info
     ) -> typing.List["SectionGQLModel"]:
-        
-        print(info)
-
         loader = getLoadersFromInfo(info).sections
         sections = await loader.filter_by(form_id=self.id)
         return sections
@@ -112,6 +109,9 @@ class FormWhereFilter:
     type_id: uuid.UUID
     createdby: uuid.UUID
 
+    from .FormTypeGQLModel import FormTypeWhereFilter
+    type: FormTypeWhereFilter
+
 @strawberry.field(description="Retrieves the form type")
 async def form_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
@@ -130,36 +130,34 @@ async def form_page(
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormInsertGQLModel:
     name: str = strawberry.field(description="form name")
+    type_id: uuid.UUID = strawberry.field(description="form type")
     
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
-    form_type_id: typing.Optional[uuid.UUID] = None
-    place: typing.Optional[str] = ""
-    published_date: typing.Optional[datetime.datetime] = datetime.datetime.now()
-    reference: typing.Optional[str] = ""
+    name_en: typing.Optional[str] = strawberry.field(description="form name", default=None)
+    type_id: typing.Optional[uuid.UUID] = None
     valid: typing.Optional[bool] = True
     createdby: strawberry.Private[uuid.UUID] = None 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
 
     name: typing.Optional[str] = strawberry.field(description="form name", default=None)
-    form_type_id: typing.Optional[uuid.UUID] = None
-    place: typing.Optional[str] = None
-    published_date: typing.Optional[datetime.datetime] = None
-    reference: typing.Optional[str] = None
+    name_en: typing.Optional[str] = strawberry.field(description="form name", default=None)
+    type_id: typing.Optional[uuid.UUID] = strawberry.field(description="form type", default=None)
     valid: typing.Optional[bool] = None
     changedby: strawberry.Private[uuid.UUID] = None
     
     
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class FormResultGQLModel:
-    id: uuid.UUID = None
-    msg: str = None
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
     @strawberry.field(description="""Result of form operation""")
     async def form(self, info: strawberry.types.Info) -> typing.Optional[FormGQLModel]:
@@ -167,24 +165,22 @@ class FormResultGQLModel:
         return result
    
 
-@strawberry.mutation
+@strawberry.mutation(description="C operation")
 async def form_insert(self, info: strawberry.types.Info, form: FormInsertGQLModel) -> FormResultGQLModel:
     user = getUserFromInfo(info)
     form.createdby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).forms
     row = await loader.insert(form)
-    result = FormResultGQLModel()
-    result.msg = "ok"
-    result.id = row.id
+    result = FormResultGQLModel(id=row.id, msg="ok")
     return result
 
-@strawberry.mutation
+@strawberry.mutation(description="U operation")
 async def form_update(self, info: strawberry.types.Info, form: FormUpdateGQLModel) -> FormResultGQLModel:
     user = getUserFromInfo(info)
     form.changedby = uuid.UUID(user["id"])
     loader = getLoadersFromInfo(info).forms
     row = await loader.update(form)
-    result = FormResultGQLModel()
+    result = FormResultGQLModel(id=form.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = form.id
         

@@ -79,7 +79,7 @@ class HistoryGQLModel(BaseGQLModel):
 #############################################################
 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class HistoryInsertGQLModel:
     name: str = strawberry.field(description="history name")
     request_id: uuid.UUID = strawberry.field(description="id of request")
@@ -88,7 +88,7 @@ class HistoryInsertGQLModel:
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     createdby: strawberry.Private[uuid.UUID] = None    
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class HistoryUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
@@ -96,17 +96,18 @@ class HistoryUpdateGQLModel:
     name: typing.Optional[str] = strawberry.field(description="history name", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class HistoryResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def history(self, info: strawberry.types.Info) -> HistoryGQLModel:
         result = await HistoryGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="C operation")
 async def history_insert(self, info: strawberry.types.Info, history: HistoryInsertGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.createdby = uuid.UUID(user["id"])
@@ -117,7 +118,7 @@ async def history_insert(self, info: strawberry.types.Info, history: HistoryInse
     result.id = row.id
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="U operation")
 async def history_update(self, info: strawberry.types.Info, history: HistoryUpdateGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.changedby = uuid.UUID(user["id"])

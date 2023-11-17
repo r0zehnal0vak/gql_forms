@@ -21,6 +21,8 @@ from GraphTypeDefinitions._GraphResolvers import (
     createAttributeVectorResolver
 )
 
+FormTypeGQLModel = typing.Annotated["FormTypeGQLModel", strawberry.lazy(".FormTypeGQLModel")]
+
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a category of form types"""
 )
@@ -43,6 +45,12 @@ class FormCategoryGQLModel(BaseGQLModel):
     createdby = resolve_createdby
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
+
+    @strawberry.field(description="")
+    async def form_types(self, info: strawberry.types.Info) -> typing.List[FormTypeGQLModel]:
+        loader = getLoadersFromInfo(info).formtypes
+        rows = await loader.filter_by(category_id=self.id)
+        return rows
 
 #############################################################
 #
@@ -94,36 +102,39 @@ form_category_page = createRootResolver_by_page(
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormCategoryInsertGQLModel:
     name: str = strawberry.field(description="Category name")
     
-    name_en: typing.Optional[str] = None
+    name_en: typing.Optional[str] = strawberry.field(description="category english name", default=None)
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
-    valid: typing.Optional[bool] = True
     createdby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U Operation")
 class FormCategoryUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
 
     name: typing.Optional[str] = strawberry.field(description="category name", default=None)
-    name_en: typing.Optional[str] = None
-    valid: typing.Optional[bool] = None
+    name_en: typing.Optional[str] = strawberry.field(description="category english name", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
-class FormCategoryResultGQLModel:
-    id: uuid.UUID
-    msg: str
 
-    @strawberry.field(description="")
+from ._GraphResolvers import resolve_result_id, resolve_result_msg
+@strawberry.type(description="Result of CU operations on FormCategory")
+class FormCategoryResultGQLModel:
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
+    
+    msg = resolve_result_msg
+
+    @strawberry.field(description="subject of operation")
     async def category(self, info: strawberry.types.Info) -> FormCategoryGQLModel:
         return await FormCategoryGQLModel.resolve_reference(info, self.id)
 
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="Create a new category")
 async def form_category_insert(self, info: strawberry.types.Info, form_category: FormCategoryInsertGQLModel) -> FormCategoryResultGQLModel:
     user = getUserFromInfo(info)
     form_category.createdby = uuid.UUID(user["id"])
@@ -134,7 +145,7 @@ async def form_category_insert(self, info: strawberry.types.Info, form_category:
     result.id = row.id
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="Update the category")
 async def form_category_update(self, info: strawberry.types.Info, form_category: FormCategoryUpdateGQLModel) -> FormCategoryResultGQLModel:
     user = getUserFromInfo(info)
     form_category.changedby = uuid.UUID(user["id"])

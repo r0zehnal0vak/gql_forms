@@ -59,7 +59,7 @@ class SectionGQLModel(BaseGQLModel):
         result = await loader.filter_by(section_id=self.id)
         return result
 
-    @strawberry.field(description="Retrieves the form owning this section")
+    @strawberry.field(description="Retrieves the form owing this section")
     async def form(self, info: strawberry.types.Info) -> typing.Optional["FormGQLModel"]:
         from .FormGQLModel import FormGQLModel
         result = await FormGQLModel.resolve_reference(info, self.form_id)
@@ -71,6 +71,21 @@ class SectionGQLModel(BaseGQLModel):
 #
 #############################################################
 
+from dataclasses import dataclass
+from .utils import createInputs
+
+@createInputs
+@dataclass
+class SectionWhereFilter:
+    name: str
+    name_en: str
+    valid: bool
+    type_id: uuid.UUID
+    createdby: uuid.UUID
+
+    from .FormGQLModel import FormWhereFilter
+    form: FormWhereFilter
+
 
 #############################################################
 #
@@ -78,7 +93,7 @@ class SectionGQLModel(BaseGQLModel):
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class SectionInsertGQLModel:
     name: str = strawberry.field(description="Section name")
     form_id: uuid.UUID = strawberry.field(description="id of parent entity")
@@ -87,7 +102,7 @@ class SectionInsertGQLModel:
     valid: typing.Optional[bool] = None
     createdby: strawberry.Private[uuid.UUID] = None 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class SectionUpdateGQLModel:
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
@@ -96,16 +111,17 @@ class SectionUpdateGQLModel:
     valid: typing.Optional[bool] = None
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class SectionResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def section(self, info: strawberry.types.Info) -> SectionGQLModel:
         return await SectionGQLModel.resolve_reference(info, self.id)
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="C operation")
 async def section_insert(self, info: strawberry.types.Info, section: SectionInsertGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.createdby = uuid.UUID(user["id"])
@@ -117,7 +133,7 @@ async def section_insert(self, info: strawberry.types.Info, section: SectionInse
     print("section_insert", result)
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="U operation")
 async def section_update(self, info: strawberry.types.Info, section: SectionUpdateGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.changedby = uuid.UUID(user["id"])

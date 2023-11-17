@@ -1,6 +1,7 @@
 import sqlalchemy
 from sqlalchemy.schema import Column
 from sqlalchemy import Uuid, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 
 from .uuid import uuid, UUIDFKey, UUIDColumn
 from .base import BaseModel
@@ -9,8 +10,8 @@ class HistoryModel(BaseModel):
     __tablename__ = "formhistories"
 
     id = UUIDColumn()
-    name = Column(String, comment="name of category")
-    name_en = Column(String, comment="english name of category")
+    name = Column(String, comment="a notice describing a reason")
+    name_en = Column(String, comment="english description")
 
     request_id = Column(ForeignKey("formrequests.id"), index=True, nullable=True)
     form_id = Column(ForeignKey("forms.id"), index=True, nullable=True)
@@ -21,3 +22,6 @@ class HistoryModel(BaseModel):
     changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")
+
+    form = relationship("FormModel", back_populates="history", uselist=False)
+    request = relationship("RequestModel", back_populates="histories", uselist=False)

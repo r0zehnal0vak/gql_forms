@@ -1,6 +1,7 @@
 import sqlalchemy
 from sqlalchemy.schema import Column
 from sqlalchemy import Uuid, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 
 from .uuid import UUIDFKey, UUIDColumn
 from .base import BaseModel
@@ -18,3 +19,5 @@ class FormCategoryModel(BaseModel):
     changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")
+
+    types = relationship("FormTypeModel", back_populates="category", uselist=True)

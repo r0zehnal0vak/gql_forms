@@ -19,8 +19,6 @@ from ..gqlshared import (
 test_reference_forms = createResolveReferenceTest(tableName='forms', gqltype='FormGQLModel', attributeNames=["id", "name", "lastchange", "valid", "status", "sections {id}", "creator {id}"])
 test_query_form_by_id = createByIdTest(tableName="forms", queryEndpoint="formById")
 test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage")
-test_query_form_by_id = createByIdTest(tableName="forms", queryEndpoint="formById")
-test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage")
 
 
 test_form_insert = createFrontendQuery(query="""

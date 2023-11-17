@@ -111,7 +111,7 @@ requests_page = createRootResolver_by_page(
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormRequestInsertGQLModel:
     name: str = strawberry.field(description="Request name")
     #form_type_id: uuid.UUID = strawberry.field(description="Form type which will be initialized")
@@ -119,23 +119,24 @@ class FormRequestInsertGQLModel:
     createdby: strawberry.Private[uuid.UUID] = None 
     rbacobject: strawberry.Private[uuid.UUID] = None
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormRequestUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
     name: typing.Optional[str] = strawberry.field(description="Request name", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class FormRequestResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def request(self, info: strawberry.types.Info) -> RequestGQLModel:
         return await RequestGQLModel.resolve_reference(info, self.id)
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="C operation")
 async def form_request_insert(self, info: strawberry.types.Info, request: FormRequestInsertGQLModel) -> FormRequestResultGQLModel:
     user = getUserFromInfo(info)
     request.createdby = uuid.UUID(user["id"])
@@ -147,7 +148,7 @@ async def form_request_insert(self, info: strawberry.types.Info, request: FormRe
     result.id = row.id
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="U operation")
 async def form_request_update(self, info: strawberry.types.Info, request: FormRequestUpdateGQLModel) -> FormRequestResultGQLModel:
     user = getUserFromInfo(info)
     request.changedby = uuid.UUID(user["id"])

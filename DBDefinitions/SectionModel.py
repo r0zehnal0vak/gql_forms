@@ -1,5 +1,6 @@
 import sqlalchemy
 from sqlalchemy.schema import Column
+from sqlalchemy.orm import relationship
 from sqlalchemy import Uuid, String, DateTime, ForeignKey, Integer
 
 from .uuid import UUIDFKey, UUIDColumn
@@ -12,7 +13,8 @@ class SectionModel(BaseModel):
     # key is st sys structure name pr as id, fk follpw by id in lower letter
 
     id = UUIDColumn()
-    name = Column(String)
+    name = Column(String, comment="name")
+    name_en = Column(String, comment="english name")
 
     form_id = Column(ForeignKey("forms.id"), index=True)
     order = Column(Integer, comment="order in parent entity")
@@ -24,3 +26,6 @@ class SectionModel(BaseModel):
     changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")
+
+    form = relationship("FormModel", back_populates="sections")
+    parts = relationship("PartModel", back_populates="section", uselist=True)

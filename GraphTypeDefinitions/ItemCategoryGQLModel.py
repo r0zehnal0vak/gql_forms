@@ -21,6 +21,8 @@ from GraphTypeDefinitions._GraphResolvers import (
     createAttributeVectorResolver
 )
 
+ItemTypeGQLModel = typing.Annotated["ItemTypeGQLModel", strawberry.lazy(".ItemTypeGQLModel")]
+
 @strawberry.federation.type(
     keys=["id"], 
     name="FormItemCategoryGQLModel",
@@ -43,6 +45,12 @@ class ItemCategoryGQLModel(BaseGQLModel):
     createdby = resolve_createdby
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
+    
+    @strawberry.field(description="")
+    async def types(self, info: strawberry.types.Info) -> typing.List["ItemTypeGQLModel"]:
+        loader = getLoadersFromInfo(info).itemtypes
+        rows = await loader.filter_by(category_id=self.id)
+        return rows   
 
 #############################################################
 #
@@ -72,13 +80,13 @@ async def item_category_by_id(
 #############################################################
 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormItemCategoryInsertGQLModel:
     name: str = strawberry.field(description="Item category name")
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     createdby: strawberry.Private[uuid.UUID] = None 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormItemCategoryUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
@@ -86,17 +94,18 @@ class FormItemCategoryUpdateGQLModel:
     name: typing.Optional[str] = strawberry.field(description="Item category name", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class FormItemCategoryResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def category(self, info: strawberry.types.Info) -> ItemCategoryGQLModel:
         result = await ItemCategoryGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="C operation")
 async def item_category_insert(self, info: strawberry.types.Info, item_category: FormItemCategoryInsertGQLModel) -> FormItemCategoryResultGQLModel:
     user = getUserFromInfo(info)
     item_category.createdby = uuid.UUID(user["id"])
@@ -107,7 +116,7 @@ async def item_category_insert(self, info: strawberry.types.Info, item_category:
     result.id = row.id
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="U operation")
 async def item_category_update(self, info: strawberry.types.Info, item_category: FormItemCategoryUpdateGQLModel) -> FormItemCategoryResultGQLModel:
     user = getUserFromInfo(info)
     item_category.changedby = uuid.UUID(user["id"])

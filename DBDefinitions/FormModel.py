@@ -1,6 +1,7 @@
 import sqlalchemy
 from sqlalchemy.schema import Column
 from sqlalchemy import Uuid, String, DateTime, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 
 from .uuid import UUIDFKey, UUIDColumn
 from .base import BaseModel
@@ -9,8 +10,8 @@ class FormModel(BaseModel):
     __tablename__ = "forms"
 
     id = UUIDColumn()
-    name = Column(String, comment="name of category")
-    name_en = Column(String, comment="english name of category")
+    name = Column(String, comment="name of form")
+    name_en = Column(String, comment="english name of form")
 
     status = Column(String)
     valid = Column(Boolean, default=True)
@@ -22,3 +23,7 @@ class FormModel(BaseModel):
     changedby = UUIDFKey(nullable=True, comment="who's changed the entity")#Column(ForeignKey("users.id"), index=True, nullable=True)
 
     rbacobject = UUIDFKey(nullable=True, comment="user or group id, determines access")
+
+    type = relationship("FormTypeModel", back_populates="forms", uselist=False)
+    sections = relationship("SectionModel", back_populates="form", uselist=True)
+    history = relationship("HistoryModel", back_populates="form", uselist=False)

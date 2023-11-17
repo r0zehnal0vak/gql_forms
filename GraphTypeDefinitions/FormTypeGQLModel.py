@@ -23,7 +23,7 @@ from GraphTypeDefinitions._GraphResolvers import (
 )
 
 FormCategoryGQLModel = Annotated["FormCategoryGQLModel", strawberry.lazy(".FormCategoryGQLModel")]
-
+FormGQLModel = Annotated["FormGQLModel", strawberry.lazy(".FormGQLModel")]
 
 @strawberry.federation.type(
     keys=["id"], description="""Entity representing a category of form types"""
@@ -54,6 +54,11 @@ class FormTypeGQLModel(BaseGQLModel):
         result = await FormCategoryGQLModel.resolve_reference(info, self.category_id)
         return result
     
+    @strawberry.field(description="")
+    async def forms(self, info: strawberry.types.Info) -> typing.List["FormGQLModel"]:
+        loader = getLoadersFromInfo(info).forms
+        rows = await loader.filter_by(type_id=self.id)
+        return rows
 #############################################################
 #
 # Queries
@@ -70,11 +75,15 @@ async def form_type_by_id(
 from dataclasses import dataclass
 from .utils import createInputs
 
+FormWhereFilter = Annotated["FormWhereFilter", strawberry.lazy(".FormGQLModel")]
 @createInputs
 @dataclass
 class FormTypeWhereFilter:
     name: str
     name_en: str
+    id: uuid.UUID
+
+    forms: FormWhereFilter
 
 @strawberry.field(description="Retrieves the form type")
 async def form_type_page(
@@ -92,7 +101,7 @@ async def form_type_page(
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormTypeInsertGQLModel:
     name: str = strawberry.field(description="form type name")
     
@@ -100,7 +109,7 @@ class FormTypeInsertGQLModel:
     valid: typing.Optional[bool] = True
     createdby: strawberry.Private[uuid.UUID] = None 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormTypeUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
@@ -109,17 +118,18 @@ class FormTypeUpdateGQLModel:
     valid: typing.Optional[bool] = None
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class FormTypeResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def type(self, info: strawberry.types.Info) -> FormTypeGQLModel:
         result = await FormTypeGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="C operation")
 async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTypeInsertGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.createdby = uuid.UUID(user["id"])
@@ -130,7 +140,7 @@ async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTyp
     result.id = row.id
     return result
 
-@strawberry.mutation(description="")
+@strawberry.mutation(description="U operation")
 async def form_type_update(self, info: strawberry.types.Info, form_type: FormTypeUpdateGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.changedby = uuid.UUID(user["id"])

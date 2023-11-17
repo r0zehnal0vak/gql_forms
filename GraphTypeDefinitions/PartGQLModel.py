@@ -82,7 +82,7 @@ class PartGQLModel(BaseGQLModel):
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormPartInsertGQLModel:
     name: str = strawberry.field(description="Part name")
     section_id: uuid.UUID
@@ -90,7 +90,7 @@ class FormPartInsertGQLModel:
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     createdby: strawberry.Private[uuid.UUID] = None 
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormPartUpdateGQLModel:
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
@@ -99,17 +99,18 @@ class FormPartUpdateGQLModel:
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
-@strawberry.type(description="")
+@strawberry.type(description="Result of CU operations")
 class FormPartResultGQLModel:
-    id: uuid.UUID
-    msg: str
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
-    @strawberry.field(description="")
+    @strawberry.field(description="Object of CU operation, final version")
     async def part(self, info: strawberry.types.Info) -> PartGQLModel:
         result = await PartGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.field(description="")
+@strawberry.field(description="C operation")
 async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQLModel) -> FormPartResultGQLModel:
     user = getUserFromInfo(info)
     part.createdby = uuid.UUID(user["id"])
@@ -121,7 +122,7 @@ async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQL
         result.id = row.id
     return result
 
-@strawberry.field(description="")
+@strawberry.field(description="U operation")
 async def part_update(self, info: strawberry.types.Info, part: FormPartUpdateGQLModel) -> FormPartResultGQLModel:
     user = getUserFromInfo(info)
     part.changedby = uuid.UUID(user["id"])

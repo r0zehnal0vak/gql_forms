@@ -116,7 +116,7 @@ async def item_page(
 #
 #############################################################
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - C operation")
 class FormItemInsertGQLModel:
     name: str = strawberry.field(description="Item name")
     part_id: uuid.UUID = strawberry.field(description="id of parent entity")
@@ -128,7 +128,7 @@ class FormItemInsertGQLModel:
     createdby: strawberry.Private[uuid.UUID] = None 
     
 
-@strawberry.input(description="")
+@strawberry.input(description="Input structure - U operation")
 class FormItemUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
@@ -139,10 +139,11 @@ class FormItemUpdateGQLModel:
     type_id: typing.Optional[uuid.UUID] = None
     changedby: strawberry.Private[uuid.UUID] = None
     
-@strawberry.type
+@strawberry.type(description="Result of CU operations")
 class FormItemResultGQLModel:
-    id: uuid.UUID = None
-    msg: str = None
+    id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+    msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
     @strawberry.field(description="""Result of item operation""")
     async def item(self, info: strawberry.types.Info) -> typing.Optional[ItemGQLModel]:
@@ -156,9 +157,8 @@ class FormItemResultGQLModel:
 async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQLModel) -> "FormItemResultGQLModel":
     user = getUserFromInfo(info)
     item.changedby = uuid.UUID(user["id"])
-    result = FormItemResultGQLModel()
-    result.id = item.id
 
+    result = FormItemResultGQLModel(id=item.id, msg="ok")
     loader = getLoadersFromInfo(info).items
     row = await loader.update(item)
     result.msg = "fail" if row is None else "ok"
@@ -166,15 +166,15 @@ async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQL
 
 
 @strawberry.field(
-    description="""Updates a section."""
+    description="""C operation"""
 )
 async def item_insert(self, info: strawberry.types.Info, item: FormItemInsertGQLModel) -> "FormItemResultGQLModel":
     user = getUserFromInfo(info)
     item.createdby = uuid.UUID(user["id"])
-    result = FormItemResultGQLModel()
 
     loader = getLoadersFromInfo(info).items
     row = await loader.insert(item)
+    result = FormItemResultGQLModel(id=item.id, msg="ok")
     result.msg = "fail" if row is None else "ok"
     result.id = None if row is None else row.id
     return result    

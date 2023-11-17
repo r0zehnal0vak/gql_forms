@@ -1,4 +1,5 @@
 import logging
+import json
 
 def createGQLClient():
 
@@ -14,6 +15,7 @@ def createGQLClient():
     import main
     
     client = TestClient(main.app, raise_server_exceptions=False)
+    
     return client
 
 def CreateClientFunction():
@@ -31,3 +33,17 @@ def CreateClientFunction():
         return response.json()
     
     return result
+
+def updateIntrospectionQuery():
+    from .introspection import query
+    client = createGQLClient()
+    inputjson = {"query": query, "variables": {}}
+    response = client.post("/gql", headers={}, json=inputjson)
+    responsejson = response.json()
+    data = responsejson["data"]
+    print(responsejson)
+    with open("./introspectionquery.json", "w", encoding="utf-8") as f:
+        datastr = json.dumps(data)
+        f.write(datastr)
+
+updateIntrospectionQuery()

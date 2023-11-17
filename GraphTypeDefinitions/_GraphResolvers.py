@@ -43,10 +43,12 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
 @strawberry.field(description="""Who made last change""")
 async def resolve_rbacobject(self) -> typing.Optional[RBACObjectGQLModel]:
     from ._RBACObjectGQLModel import RBACObjectGQLModel
-    result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobjecter_id)
+    result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobject_id)
     return result
 
-
+resolve_result_id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
+resolve_result_msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
 
 
 def createAttributeScalarResolver(
