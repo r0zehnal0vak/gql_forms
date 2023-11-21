@@ -4,7 +4,8 @@ from .externals import resolve_reference
 
 from utils.Dataloaders import getLoadersFromInfo
 
-@strawberry.federation.type(extend=True, keys=["id"])
+#@strawberry.federation.type(extend=False, keys=["id"])
+@strawberry.federation.type(keys=["id"])
 class RBACObjectGQLModel:
     id: uuid.UUID = strawberry.federation.field(external=True)
     resolve_reference = resolve_reference
