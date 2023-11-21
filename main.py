@@ -10,7 +10,7 @@ logging.basicConfig(
     format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
     datefmt='%Y-%m-%dT%I:%M:%S')
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import strawberry
 from strawberry.fastapi import GraphQLRouter
 from contextlib import asynccontextmanager
@@ -84,9 +84,13 @@ from doc import attachVoyager
 attachVoyager(app, path="/gql/doc")
 
 print("All initialization is done")
-# @app.get('/hello')
-# def hello():
-#    return {'hello': 'world'}
+@app.get('/hello')
+def hello(request: Request):
+    headers = request.headers
+    auth = request.auth
+    user = request.scope["user"]
+    return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
+    
 
 
 

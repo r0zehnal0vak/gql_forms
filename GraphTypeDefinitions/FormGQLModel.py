@@ -117,6 +117,11 @@ async def form_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: typing.Optional[FormWhereFilter] = None
 ) -> typing.List[FormGQLModel]:
+    # print(info)
+    # context = info.context
+    # request = context["request"]
+    # user = request.scope["user"]
+    # print(user)
     wf = None if where is None else strawberry.asdict(where)
     loader = getLoadersFromInfo(info).forms
     result = await loader.page(skip, limit, where=wf)
