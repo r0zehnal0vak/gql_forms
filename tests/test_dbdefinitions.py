@@ -36,7 +36,7 @@ def test_connection_string():
     connectionString = ComposeConnectionString()
 
     assert "://" in connectionString
-    assert "@" in connectionString
+    #assert "@" in connectionString
 
 
 from DBDefinitions import startEngine

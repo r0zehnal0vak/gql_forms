@@ -25,7 +25,7 @@ def resolve_lastchange(self) -> datetime.datetime:
 
 @strawberry.field(description="""Time of entity introduction""")
 def resolve_created(self) -> typing.Optional[datetime.datetime]:
-    return self.lastchange
+    return self.created
 
 async def resolve_user(user_id):
     from .externals import UserGQLModel
