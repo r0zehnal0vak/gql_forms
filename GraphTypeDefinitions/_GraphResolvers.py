@@ -3,6 +3,9 @@ import uuid
 import datetime
 import typing
 
+
+UUIDType = uuid.UUID
+
 UserGQLModel = typing.Annotated["UserGQLModel", strawberry.lazy(".externals")]
 GroupGQLModel = typing.Annotated["GroupGQLModel", strawberry.lazy(".externals")]
 RBACObjectGQLModel = typing.Annotated["RBACObjectGQLModel", strawberry.lazy("._RBACObjectGQLModel")]
@@ -48,6 +51,16 @@ async def resolve_rbacobject(self) -> typing.Optional[RBACObjectGQLModel]:
 
 resolve_result_id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
 resolve_result_msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
+For update operation fail should be also stated when bad lastchange has been entered.""")
+
+# fields for mutations insert and update 
+resolve_insert_id = strawberry.field(graphql_type=typing.Optional[uuid.UUID], description="primary key (UUID), could be client generated", default=None)
+resolve_update_id = strawberry.field(graphql_type=uuid.UUID, description="primary key (UUID), identifies object of operation")
+resolve_update_lastchage = strawberry.field(graphql_type=datetime.datetime, description="timestamp of last change = TOKEN")
+
+# fields for mutation result
+resolve_cu_result_id = strawberry.field(graphql_type=uuid.UUID, description="primary key of CU operation object")
+resolve_cu_result_msg = strawberry.field(graphql_type=str, description="""Should be `ok` if descired state has been reached, otherwise `fail`.
 For update operation fail should be also stated when bad lastchange has been entered.""")
 
 
