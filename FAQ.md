@@ -15,7 +15,7 @@ They become readable directly from SQL Server.
 - fields
 - ...
 
-Such `description` becomes a part og GQL endpoint and introspection query can fetch it.
+Such `description` becomes a part of GQL endpoint and introspection query can fetch it.
 It is also part of several documentation UIs (GrpahiQL, Voyager, ...)
 
 ## How to convert py file into directory
@@ -143,6 +143,4 @@ test_form_update = createUpdateQuery(
     variables={"id": "190d578c-afb1-11ed-9bd8-0242ac110002", "name": "new name"},
     tableName="forms"
 )
-
-
 ```

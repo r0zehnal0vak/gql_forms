@@ -1,8 +1,5 @@
 from typing import List
-import time
-import typing
 import logging
-import asyncio
 
 import logging
 logging.basicConfig(
@@ -22,17 +19,12 @@ from GraphTypeDefinitions import Query
 ## Definice DB typu (pomoci SQLAlchemy https://www.sqlalchemy.org/)
 ## SQLAlchemy zvoleno kvuli moznost komunikovat s DB asynchronne
 ## https://docs.sqlalchemy.org/en/14/core/future.html?highlight=select#sqlalchemy.future.select
-from DBDefinitions import startEngine, ComposeConnectionString
-
-from utils.DBFeeder import initDB
+from DBDefinitions import ComposeConnectionString
 
 ## Zabezpecuje prvotni inicializaci DB a definovani Nahodne struktury pro "Univerzity"
 # from gql_workflow.DBFeeder import createSystemDataStructureRoleTypes, createSystemDataStructureGroupTypes
 
 connectionString = ComposeConnectionString()
-
-from strawberry.asgi import GraphQL
-from utils.Dataloaders import createLoaders
 
 appcontext = {}
 @asynccontextmanager
@@ -61,8 +53,6 @@ async def initEngine(app: FastAPI):
 
 from GraphTypeDefinitions import schema
 
-app = FastAPI(lifespan=initEngine)
-
 async def get_context():
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
     if asyncSessionMaker is None:
@@ -78,29 +68,35 @@ graphql_app = GraphQLRouter(
     context_getter=get_context
 )
 
-app.include_router(graphql_app, prefix="/gql")
+def createApp():
+    app = FastAPI(lifespan=initEngine)
+    app.include_router(graphql_app, prefix="/gql")
 
-from doc import attachVoyager
-attachVoyager(app, path="/gql/doc")
+    from doc import attachVoyager
+    attachVoyager(app, path="/gql/doc")
 
-print("All initialization is done")
-@app.get('/hello')
-def hello(request: Request):
-    headers = request.headers
-    auth = request.auth
-    user = request.scope["user"]
-    return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
-    
+    print("All initialization is done")
+    @app.get('/hello')
+    def hello(request: Request):
+        headers = request.headers
+        auth = request.auth
+        user = request.scope["user"]
+        return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
+    return app
 
+app = createApp()
+import os
+JWTPUBLICKEY = os.environ.get("JWTPUBLICKEY", "http://localhost:8000/oauth/publickey")
+JWTRESOLVEUSERPATH = os.environ.get("JWTRESOLVEUSERPATH", "http://localhost:8000/oauth/userinfo")
 
+from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend
+app.add_middleware(BasicAuthenticationMiddleware302, backend=BasicAuthBackend(
+        JWTPUBLICKEY = JWTPUBLICKEY,
+        JWTRESOLVEUSERPATH = JWTRESOLVEUSERPATH
+))
 
-from starlette.authentication import (
-    AuthCredentials, AuthenticationBackend, AuthenticationError
-)
-from starlette.middleware.authentication import AuthenticationMiddleware
-
-class BasicAuthBackend(AuthenticationBackend):
-    async def authenticate(self, conn):
-        return AuthCredentials(["authenticated"]), {"name": "John", "surname": "Newbie"}
-
-app.add_middleware(AuthenticationMiddleware, backend=BasicAuthBackend())
+import os
+demo = os.getenv("DEMO", None)
+print("DEMO", demo, type(demo))
+demo = os.getenv("DEMOUSER", None)
+print("DEMOUSER", demo, type(demo))

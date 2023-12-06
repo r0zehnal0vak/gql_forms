@@ -1,5 +1,7 @@
 ```
 uvicorn main:app --reload
+
+uvicorn main:app --env-file environment.txt --reload
 ```
 
 ```
