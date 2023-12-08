@@ -8,6 +8,7 @@ logging.basicConfig(
     datefmt='%Y-%m-%dT%I:%M:%S')
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 import strawberry
 from strawberry.fastapi import GraphQLRouter
 from contextlib import asynccontextmanager
@@ -75,6 +76,24 @@ def createApp():
     from doc import attachVoyager
     attachVoyager(app, path="/gql/doc")
 
+
+    # def introspection():
+    #     introspectionQuery =  "query __ApolloGetServiceDefinition__ { _service { sdl } }"
+    #     introspectionResult = schema.execute_sync(introspectionQuery, operation_name="__ApolloGetServiceDefinition__")
+    #     assert introspectionResult.errors is None
+    #     introspectionResult = {"data": introspectionResult.data}
+    #     return JSONResponse(introspectionResult) 
+
+    # @app.post("/introspection")
+    # def i():
+    #     return introspection()
+    
+    # @app.get("/introspection")
+    # def i():
+    #     return introspection()
+
+
+
     print("All initialization is done")
     @app.get('/hello')
     def hello(request: Request):
@@ -90,10 +109,10 @@ JWTPUBLICKEY = os.environ.get("JWTPUBLICKEY", "http://localhost:8000/oauth/publi
 JWTRESOLVEUSERPATH = os.environ.get("JWTRESOLVEUSERPATH", "http://localhost:8000/oauth/userinfo")
 
 from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend
-app.add_middleware(BasicAuthenticationMiddleware302, backend=BasicAuthBackend(
-        JWTPUBLICKEY = JWTPUBLICKEY,
-        JWTRESOLVEUSERPATH = JWTRESOLVEUSERPATH
-))
+# app.add_middleware(BasicAuthenticationMiddleware302, backend=BasicAuthBackend(
+#         JWTPUBLICKEY = JWTPUBLICKEY,
+#         JWTRESOLVEUSERPATH = JWTRESOLVEUSERPATH
+# ))
 
 import os
 demo = os.getenv("DEMO", None)
