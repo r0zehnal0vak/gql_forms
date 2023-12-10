@@ -276,7 +276,11 @@ def RolesToList(roles: str = ""):
     return roleIdsNeeded
 
 from utils.Dataloaders import getLoadersFromInfo
-from ._RBACObjectGQLModel import RBACObjectGQLModel
+# from ._RBACObjectGQLModel import RBACObjectGQLModel
+
+async def resolveRoles(info, id):
+    return []
+
 @cache
 def RoleBasedPermission(roles: str = ""):
     roleIdsNeeded = RolesToList(roles)
@@ -296,7 +300,7 @@ def RoleBasedPermission(roles: str = ""):
 
             rbacobject = getattr(source, "rbacobject", "None f8089aa6-2c4a-4746-9503-105fcc5d054c")
             rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
-            authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)
+            authorizedroles = await resolve_roles(info=info, id=rbacobject)
 
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)

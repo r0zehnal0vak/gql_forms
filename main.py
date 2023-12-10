@@ -1,5 +1,7 @@
-from typing import List
+from typing import Any, List
 import logging
+import os
+from pydantic import BaseModel
 
 import logging
 logging.basicConfig(
@@ -7,19 +9,11 @@ logging.basicConfig(
     format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
     datefmt='%Y-%m-%dT%I:%M:%S')
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
-import strawberry
 from strawberry.fastapi import GraphQLRouter
 from contextlib import asynccontextmanager
 
-## Definice GraphQL typu (pomoci strawberry https://strawberry.rocks/)
-## Strawberry zvoleno kvuli moznosti mit federovane GraphQL API (https://strawberry.rocks/docs/guides/federation, https://www.apollographql.com/docs/federation/)
-from GraphTypeDefinitions import Query
-
-## Definice DB typu (pomoci SQLAlchemy https://www.sqlalchemy.org/)
-## SQLAlchemy zvoleno kvuli moznost komunikovat s DB asynchronne
-## https://docs.sqlalchemy.org/en/14/core/future.html?highlight=select#sqlalchemy.future.select
 from DBDefinitions import ComposeConnectionString
 
 ## Zabezpecuje prvotni inicializaci DB a definovani Nahodne struktury pro "Univerzity"
@@ -64,58 +58,88 @@ async def get_context():
     context = createLoadersContext(appcontext["asyncSessionMaker"])
     return {**context}
 
+app = FastAPI(lifespan=initEngine)
+
+from doc import attachVoyager
+attachVoyager(app, path="/gql/doc")
+
+
+print("All initialization is done")
+@app.get('/hello')
+def hello(request: Request):
+    headers = request.headers
+    auth = request.auth
+    user = request.scope["user"]
+    return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
+
+JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", "http://localhost:8000/oauth/publickey")
+JWTRESOLVEUSERPATHURL = os.environ.get("JWTRESOLVEUSERPATHURL", "http://localhost:8000/oauth/userinfo")
+
+class Item(BaseModel):
+    query: str
+    variables: dict = None
+    operationName: str = None
+
+apolloQuery = "query __ApolloGetServiceDefinition__ { _service { sdl } }"
+graphiQLQuery = "\n    query IntrospectionQuery {\n      __schema {\n        \n        queryType { name }\n        mutationType { name }\n        subscriptionType { name }\n        types {\n          ...FullType\n        }\n        directives {\n          name\n          description\n          \n          locations\n          args(includeDeprecated: true) {\n            ...InputValue\n          }\n        }\n      }\n    }\n\n    fragment FullType on __Type {\n      kind\n      name\n      description\n      \n      fields(includeDeprecated: true) {\n        name\n        description\n        args(includeDeprecated: true) {\n          ...InputValue\n        }\n        type {\n          ...TypeRef\n        }\n        isDeprecated\n        deprecationReason\n      }\n      inputFields(includeDeprecated: true) {\n        ...InputValue\n      }\n      interfaces {\n        ...TypeRef\n      }\n      enumValues(includeDeprecated: true) {\n        name\n        description\n        isDeprecated\n        deprecationReason\n      }\n      possibleTypes {\n        ...TypeRef\n      }\n    }\n\n    fragment InputValue on __InputValue {\n      name\n      description\n      type { ...TypeRef }\n      defaultValue\n      isDeprecated\n      deprecationReason\n    }\n\n    fragment TypeRef on __Type {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n                ofType {\n                  kind\n                  name\n                  ofType {\n                    kind\n                    name\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  "
+
+from uoishelpers.authenticationMiddleware import createAuthentizationSentinel
+sentinel = createAuthentizationSentinel(
+    JWTPUBLICKEY=JWTPUBLICKEYURL,
+    JWTRESOLVEUSERPATH=JWTRESOLVEUSERPATHURL,
+    queriesWOAuthentization=[apolloQuery, graphiQLQuery],
+    onAuthenticationError=lambda item: JSONResponse({"data": None, "errors": ["Unauthenticated", item.query, f"{item.variables}"]}, 
+    status_code=401))
+
 graphql_app = GraphQLRouter(
     schema,
     context_getter=get_context
 )
 
-def createApp():
-    app = FastAPI(lifespan=initEngine)
-    app.include_router(graphql_app, prefix="/gql")
+@app.get("/gql")
+async def graphiql(request: Request):
+    return await graphql_app.render_graphql_ide(request)
 
-    from doc import attachVoyager
-    attachVoyager(app, path="/gql/doc")
-
-
-    # def introspection():
-    #     introspectionQuery =  "query __ApolloGetServiceDefinition__ { _service { sdl } }"
-    #     introspectionResult = schema.execute_sync(introspectionQuery, operation_name="__ApolloGetServiceDefinition__")
-    #     assert introspectionResult.errors is None
-    #     introspectionResult = {"data": introspectionResult.data}
-    #     return JSONResponse(introspectionResult) 
-
-    # @app.post("/introspection")
-    # def i():
-    #     return introspection()
+@app.post("/gql")
+async def apollo_gql(request: Request, item: Item):
+    if not DEMO:
+        sentinelResult = await sentinel(request, item)
+        if sentinelResult:
+            return sentinelResult
+    try:
+        context = await get_context()
+        schemaresult = await schema.execute(item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
+        # assert 1 == 0, ":)"
+    except Exception as e:
+        return {"data": None, "errors": [f"{type(e).__name__}: {e}"]}
     
-    # @app.get("/introspection")
-    # def i():
-    #     return introspection()
+    result = {"data": schemaresult.data}
+    if schemaresult.errors:
+        result["errors"] = [f"{error}" for error in schemaresult.errors]
+    return result
 
-
-
-    print("All initialization is done")
-    @app.get('/hello')
-    def hello(request: Request):
-        headers = request.headers
-        auth = request.auth
-        user = request.scope["user"]
-        return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
-    return app
-
-app = createApp()
-import os
-JWTPUBLICKEY = os.environ.get("JWTPUBLICKEY", "http://localhost:8000/oauth/publickey")
-JWTRESOLVEUSERPATH = os.environ.get("JWTRESOLVEUSERPATH", "http://localhost:8000/oauth/userinfo")
-
-from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend
+# from uoishelpers.authenticationMiddleware import BasicAuthenticationMiddleware302, BasicAuthBackend
 # app.add_middleware(BasicAuthenticationMiddleware302, backend=BasicAuthBackend(
 #         JWTPUBLICKEY = JWTPUBLICKEY,
 #         JWTRESOLVEUSERPATH = JWTRESOLVEUSERPATH
 # ))
 
 import os
-demo = os.getenv("DEMO", None)
-print("DEMO", demo, type(demo))
-demo = os.getenv("DEMOUSER", None)
-print("DEMOUSER", demo, type(demo))
+DEMO = os.getenv("DEMO", None)
+assert DEMO is not None, "DEMO environment variable must be explicitly defined"
+assert (DEMO == "True") or (DEMO == "False"), "DEMO environment variable can have only `True` or `False` values"
+DEMO = DEMO == "True"
+
+if DEMO:
+    print("####################################################")
+    print("#                                                  #")
+    print("# RUNNING IN DEMO                                  #")
+    print("#                                                  #")
+    print("####################################################")
+
+    logging.info("####################################################")
+    logging.info("#                                                  #")
+    logging.info("# RUNNING IN DEMO                                  #")
+    logging.info("#                                                  #")
+    logging.info("####################################################")
+

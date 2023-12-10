@@ -180,6 +180,30 @@ class AuthorizationLoader(DataLoader):
             group { id }
         }
     """
+
+
+# {
+#   rbacById(id: "2d9dc5ca-a4a2-11ed-b9df-0242ac120003") {
+#     id
+#     roles {
+#       roletype {
+#         id
+#         name
+#       }
+#       user {
+#         email
+#       }
+#       group {
+#         name
+#       }
+#       valid
+#     }
+#   }
+# }
+
+
+
+
     roleUrlEndpoint=composeAuthUrl()
     def __init__(self,
         roleUrlEndpoint=roleUrlEndpoint,
