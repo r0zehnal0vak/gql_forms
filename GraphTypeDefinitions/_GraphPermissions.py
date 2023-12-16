@@ -269,6 +269,8 @@ from utils.Dataloaders import getLoadersFromInfo
 async def resolveRoles(info, id):
     return []
 
+from utils.Dataloaders import getUgConnection
+
 @cache
 def RoleBasedPermission(roles: str = ""):
     roleIdsNeeded = RolesToList(roles)
@@ -283,22 +285,30 @@ def RoleBasedPermission(roles: str = ""):
             print("RolebasedPermission", source) ## self as in GQLModel
             print("RolebasedPermission", kwargs)
 
-            if hasattr(source, "rbacobject"):
-                print("RolebasedPermission hasattr 'rbacobject'")
-
-            rbacobject = getattr(source, "rbacobject", "None f8089aa6-2c4a-4746-9503-105fcc5d054c")
+            assert hasattr(source, "rbacobject"), f"missing rbacobject on {source}"
+            
+            rbacobject = source.rbacobject
+            
+            #rbacobject
+            assert rbacobject is not None, f"RoleBasedPermission cannot be used on {source} as it has None value"
             rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
 
             ## zjistime, jake role jsou vztazeny k rbacobject 
+            query = """query($id: UUID!){result: rbacById(id: $id) {roles {user { id } group { id } roletype { id }}}}"""
+            variables = {"id": rbacobject}
+            connection = getUgConnection(info)
+            response = await connection.asyncpost(query=query, variables=variables)
+            # print(response)
+            authorizedroles = response["data"]["result"]["roles"]
             
-            authorizedroles = await resolve_roles(info=info, id=rbacobject)
-
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)
             print("RolebasedPermission.authorized", authorizedroles)
-            user_id = ""
+            user_id = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
             s = [r for r in authorizedroles if (r["roletype"]["id"] in roleIdsNeeded)and(r["user"]["id"] == user_id)]
-            s = [r for r in authorizedroles if r["roletype"]["id"] in roleIdsNeeded]
+            # s = [r for r in authorizedroles if r["roletype"]["id"] in roleIdsNeeded]
+
+            # print("SSSSSSSSSSSSSSS", s)
             if len(s) > 0:
                 print("RolebasedPermission.access allowed")
             else:

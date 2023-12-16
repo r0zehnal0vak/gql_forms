@@ -21,6 +21,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     createAttributeScalarResolver,
     createAttributeVectorResolver
 )
+from ._GraphPermissions import RoleBasedPermission
 
 SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel")]
 FormTypeGQLModel = Annotated["FormTypeGQLModel", strawberry.lazy(".FormTypeGQLModel")]
@@ -69,9 +70,12 @@ class FormGQLModel(BaseGQLModel):
     def status(self) -> typing.Optional[str]:
         return self.status
 
-    @strawberry.field(description="Retrieves the sections related to this form (form has several sections), form->section->part->item")
+    @strawberry.field(
+        description="Retrieves the sections related to this form (form has several sections), form->section->part->item",
+        permission_classes=[RoleBasedPermission(roles="administrator")]
+        )
     async def sections(
-        self, info: strawberry.types.Info
+        self, info: strawberry.types.Info,
     ) -> typing.List["SectionGQLModel"]:
         loader = getLoadersFromInfo(info).sections
         sections = await loader.filter_by(form_id=self.id)
