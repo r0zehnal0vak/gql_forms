@@ -22,8 +22,8 @@ test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage
 
 
 test_form_insert = createFrontendQuery(query="""
-    mutation($id: UUID!, $name: String!) { 
-        result: formInsert(form: {id: $id, name: $name}) { 
+    mutation($id: UUID!, $name: String!, $rbac_id: UUID!) { 
+        result: formInsert(form: {id: $id, name: $name, rbacId: $rbac_id}) { 
             id
             msg
             form {
@@ -34,7 +34,7 @@ test_form_insert = createFrontendQuery(query="""
         }
     }
     """, 
-    variables={"id": "ccde3a8b-81d0-4e2b-9aac-42e0eb2255b3", "name": "new form"},
+    variables={"id": "ccde3a8b-81d0-4e2b-9aac-42e0eb2255b3", "name": "new form", "rbac_id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"},
     asserts=[]
 )
 

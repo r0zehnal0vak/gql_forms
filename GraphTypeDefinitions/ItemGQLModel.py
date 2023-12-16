@@ -126,6 +126,7 @@ class FormItemInsertGQLModel:
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     type_id: typing.Optional[uuid.UUID] = None
     createdby: strawberry.Private[uuid.UUID] = None 
+    rbacobject: strawberry.Private[uuid.UUID] = None 
     
 
 @strawberry.input(description="Input structure - U operation")
@@ -171,6 +172,14 @@ async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQL
 async def item_insert(self, info: strawberry.types.Info, item: FormItemInsertGQLModel) -> "FormItemResultGQLModel":
     user = getUserFromInfo(info)
     item.createdby = uuid.UUID(user["id"])
+
+    # form as the parent of new section is checked
+    # rbacobject is retrieved and assigned to section.rbacobject
+    # rbacobject is shared among form, its sections and parts
+    partloader = getLoadersFromInfo(info).parts
+    part = partloader.load(item.part_id)
+    assert part is not None, f"{item.part_id} is unknown part (of section) (during item insert)"
+    item.rbacobject = part.rbacobject
 
     loader = getLoadersFromInfo(info).items
     row = await loader.insert(item)

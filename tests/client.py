@@ -1,5 +1,8 @@
 import logging
 import json
+import os
+
+os.environ.setdefault("DEMO", "True")
 
 def createGQLClient():
 

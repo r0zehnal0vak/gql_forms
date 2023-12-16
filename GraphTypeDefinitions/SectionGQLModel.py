@@ -101,6 +101,7 @@ class SectionInsertGQLModel:
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     valid: typing.Optional[bool] = None
     createdby: strawberry.Private[uuid.UUID] = None 
+    rbacobject: strawberry.Private[uuid.UUID] = None 
 
 @strawberry.input(description="Input structure - U operation")
 class SectionUpdateGQLModel:
@@ -125,6 +126,15 @@ For update operation fail should be also stated when bad lastchange has been ent
 async def section_insert(self, info: strawberry.types.Info, section: SectionInsertGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.createdby = uuid.UUID(user["id"])
+
+    # form as the parent of new section is checked
+    # rbacobject is retrieved and assigned to section.rbacobject
+    # rbacobject is shared among form and its sections
+    formloader = getLoadersFromInfo(info).forms
+    form = formloader.load(section.form_id)
+    assert form is not None, f"{section.form_id} is unknown form (during section insert)"
+    section.rbacobject = form.rbacobject
+
     loader = getLoadersFromInfo(info).sections
     row = await loader.insert(section)
     result = SectionResultGQLModel(id=section.id, msg="fail")
@@ -137,6 +147,7 @@ async def section_insert(self, info: strawberry.types.Info, section: SectionInse
 async def section_update(self, info: strawberry.types.Info, section: SectionUpdateGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.changedby = uuid.UUID(user["id"])
+
     loader = getLoadersFromInfo(info).sections
     row = await loader.update(section)
     result = SectionResultGQLModel(id=section.id, msg="fail")

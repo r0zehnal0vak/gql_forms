@@ -89,6 +89,7 @@ class FormPartInsertGQLModel:
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     createdby: strawberry.Private[uuid.UUID] = None 
+    rbacobject: strawberry.Private[uuid.UUID] = None 
 
 @strawberry.input(description="Input structure - U operation")
 class FormPartUpdateGQLModel:
@@ -114,6 +115,15 @@ For update operation fail should be also stated when bad lastchange has been ent
 async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQLModel) -> FormPartResultGQLModel:
     user = getUserFromInfo(info)
     part.createdby = uuid.UUID(user["id"])
+
+    # form as the parent of new section is checked
+    # rbacobject is retrieved and assigned to section.rbacobject
+    # rbacobject is shared among form, its sections and parts
+    sectionloader = getLoadersFromInfo(info).sections
+    section = sectionloader.load(part.section_id)
+    assert section is not None, f"{part.section_id} is unknown section (of form) (during part insert)"
+    part.rbacobject = section.rbacobject
+
     result = FormPartResultGQLModel(id=part.id, msg="fail")
     loader = getLoadersFromInfo(info).parts
     row = await loader.insert(part)

@@ -181,14 +181,9 @@ rolelist = [
 import requests
 
 def ReadAllRoles():
-    roleUrlEndpoint="http://localhost:8088/gql/"    
-    query = """query {
-        roleTypePage(limit: 1000) {
-            id
-            name
-            nameEn
-        }
-    }"""
+    ROLEENDPOINTURL=os.environ.get("ROLEENDPOINTURL", None)
+    assert ROLEENDPOINTURL is not None, "ROLEENDPOINTURL as environment variable is not defined and we are not in DEMO mode!"
+    query = """query {roleTypePage(limit: 1000) {id, name, nameEn}}"""
     variables = {}
     headers = {}
     json = {
@@ -196,13 +191,13 @@ def ReadAllRoles():
         "variables": variables
     }
 
-    response = requests.post(url=roleUrlEndpoint, json=json, headers=headers)
+    response = requests.post(url=ROLEENDPOINTURL, json=json, headers=headers)
     respJson = response.json()
-    assert respJson.get("errors", None) is None
+    assert respJson.get("errors", None) is None, respJson["errors"]
     respdata = respJson.get("data", None)
-    assert respdata is not None
+    assert respdata is not None, "during roles reading roles have not been readed"
     roles = respdata.get("roles", None)
-    assert roles is not None
+    assert roles is not None, "during roles reading roles have not been readed"
     print("roles", roles)
     roles = list(map(lambda item: {**item, "nameEn": item["name_ne"]}, roles))
     return [*roles]

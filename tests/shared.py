@@ -2,6 +2,7 @@ import sqlalchemy
 import sys
 import asyncio
 import logging
+import os
 
 # setting path
 #sys.path.append("../gql_forms")
@@ -9,6 +10,7 @@ import logging
 import pytest
 
 # from ..uoishelpers.uuid import UUIDColumn
+os.environ.setdefault("DEMO", "True")
 
 from DBDefinitions import (
     BaseModel,

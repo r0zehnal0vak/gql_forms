@@ -48,9 +48,9 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
 #     result = None if self.rbacobject is None else await resolve_user(self.rbacobject_id)
 #     return result
 
-@strawberry.field(description="""Who made last change""")
+@strawberry.field(description="""RBAC object providing information for resolution of authorizations""")
 async def resolve_rbacobject(self) -> typing.Optional["RBACObjectGQLModel"]:
-    from ._RBACObjectGQLModel import RBACObjectGQLModel
+    from externals import RBACObjectGQLModel
     result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobject_id)
     return result
 

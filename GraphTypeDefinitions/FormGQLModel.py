@@ -26,9 +26,18 @@ SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel
 FormTypeGQLModel = Annotated["FormTypeGQLModel", strawberry.lazy(".FormTypeGQLModel")]
 UserGQLModel = Annotated["UserGQLModel", strawberry.lazy(".externals")]
 
+FormGQLModelDescription = """
+# Reason
+
+Entity representing a form, form is digitalized A4 sheet
+
+## Structure
+
+form -> sections -> parts -> items
+"""
 
 @strawberry.federation.type(
-    keys=["id"], description="""Entity representing a form, form is digitalized A4 sheet"""
+    keys=["id"], description=FormGQLModelDescription
 )
 class FormGQLModel(BaseGQLModel):
     """
@@ -139,6 +148,7 @@ async def form_page(
 class FormInsertGQLModel:
     name: str = strawberry.field(description="form name")
     type_id: uuid.UUID = strawberry.field(description="form type")
+    rbac_id: uuid.UUID = strawberry.field(description="user_id or group_id, allows resolution of authorized users")
     
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     name_en: typing.Optional[str] = strawberry.field(description="form name", default=None)

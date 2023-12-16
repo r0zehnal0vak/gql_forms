@@ -199,7 +199,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
             context_value=context_value
         )
 
-        assert resp.errors is None
+        assert resp.errors is None, resp.errors[0]
         respdata = resp.data
         logging.debug(f"response: {respdata}")
         for a in asserts:
