@@ -131,7 +131,7 @@ async def section_insert(self, info: strawberry.types.Info, section: SectionInse
     # rbacobject is retrieved and assigned to section.rbacobject
     # rbacobject is shared among form and its sections
     formloader = getLoadersFromInfo(info).forms
-    form = formloader.load(section.form_id)
+    form = await formloader.load(section.form_id)
     assert form is not None, f"{section.form_id} is unknown form (during section insert)"
     section.rbacobject = form.rbacobject
 

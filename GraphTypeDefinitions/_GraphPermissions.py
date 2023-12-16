@@ -179,20 +179,13 @@ rolelist = [
 #     pass
 
 import requests
+from utils.gql_ug_proxy import gqlproxy
 
 def ReadAllRoles():
-    ROLEENDPOINTURL=os.environ.get("ROLEENDPOINTURL", None)
-    assert ROLEENDPOINTURL is not None, "ROLEENDPOINTURL as environment variable is not defined and we are not in DEMO mode!"
     query = """query {roleTypePage(limit: 1000) {id, name, nameEn}}"""
     variables = {}
-    headers = {}
-    json = {
-        "query": query,
-        "variables": variables
-    }
 
-    response = requests.post(url=ROLEENDPOINTURL, json=json, headers=headers)
-    respJson = response.json()
+    respJson = gqlproxy.post(query=query, variables=variables)
     assert respJson.get("errors", None) is None, respJson["errors"]
     respdata = respJson.get("data", None)
     assert respdata is not None, "during roles reading roles have not been readed"
@@ -295,6 +288,9 @@ def RoleBasedPermission(roles: str = ""):
 
             rbacobject = getattr(source, "rbacobject", "None f8089aa6-2c4a-4746-9503-105fcc5d054c")
             rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+
+            ## zjistime, jake role jsou vztazeny k rbacobject 
+            
             authorizedroles = await resolve_roles(info=info, id=rbacobject)
 
             print("RolebasedPermission.rbacobject", rbacobject)

@@ -177,7 +177,7 @@ async def item_insert(self, info: strawberry.types.Info, item: FormItemInsertGQL
     # rbacobject is retrieved and assigned to section.rbacobject
     # rbacobject is shared among form, its sections and parts
     partloader = getLoadersFromInfo(info).parts
-    part = partloader.load(item.part_id)
+    part = await partloader.load(item.part_id)
     assert part is not None, f"{item.part_id} is unknown part (of section) (during item insert)"
     item.rbacobject = part.rbacobject
 

@@ -10,7 +10,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%dT%I:%M:%S')
 
 from fastapi import FastAPI, Request, Depends
-from fastapi.responses import JSONResponse
 from strawberry.fastapi import GraphQLRouter
 from contextlib import asynccontextmanager
 
@@ -48,21 +47,22 @@ async def initEngine(app: FastAPI):
 
 from GraphTypeDefinitions import schema
 
-async def get_context():
+async def get_context(request: Request):
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
     if asyncSessionMaker is None:
         async with initEngine(app) as cntx:
             pass
         
-    from utils.Dataloaders import createLoadersContext
+    from utils.Dataloaders import createLoadersContext, createUgConnectionContext
     context = createLoadersContext(appcontext["asyncSessionMaker"])
-    return {**context}
+    
+    connectionContext = createUgConnectionContext(request=request)
+    return {**context, **connectionContext}
 
 app = FastAPI(lifespan=initEngine)
 
 from doc import attachVoyager
 attachVoyager(app, path="/gql/doc")
-
 
 print("All initialization is done")
 @app.get('/hello')
@@ -72,33 +72,22 @@ def hello(request: Request):
     user = request.scope["user"]
     return {'hello': 'world', 'headers': {**headers}, 'auth': f"{auth}", 'user': user}
 
-JWTPUBLICKEYURL = os.environ.get("JWTPUBLICKEYURL", "http://localhost:8000/oauth/publickey")
-JWTRESOLVEUSERPATHURL = os.environ.get("JWTRESOLVEUSERPATHURL", "http://localhost:8000/oauth/userinfo")
-
-class Item(BaseModel):
-    query: str
-    variables: dict = None
-    operationName: str = None
-
-apolloQuery = "query __ApolloGetServiceDefinition__ { _service { sdl } }"
-graphiQLQuery = "\n    query IntrospectionQuery {\n      __schema {\n        \n        queryType { name }\n        mutationType { name }\n        subscriptionType { name }\n        types {\n          ...FullType\n        }\n        directives {\n          name\n          description\n          \n          locations\n          args(includeDeprecated: true) {\n            ...InputValue\n          }\n        }\n      }\n    }\n\n    fragment FullType on __Type {\n      kind\n      name\n      description\n      \n      fields(includeDeprecated: true) {\n        name\n        description\n        args(includeDeprecated: true) {\n          ...InputValue\n        }\n        type {\n          ...TypeRef\n        }\n        isDeprecated\n        deprecationReason\n      }\n      inputFields(includeDeprecated: true) {\n        ...InputValue\n      }\n      interfaces {\n        ...TypeRef\n      }\n      enumValues(includeDeprecated: true) {\n        name\n        description\n        isDeprecated\n        deprecationReason\n      }\n      possibleTypes {\n        ...TypeRef\n      }\n    }\n\n    fragment InputValue on __InputValue {\n      name\n      description\n      type { ...TypeRef }\n      defaultValue\n      isDeprecated\n      deprecationReason\n    }\n\n    fragment TypeRef on __Type {\n      kind\n      name\n      ofType {\n        kind\n        name\n        ofType {\n          kind\n          name\n          ofType {\n            kind\n            name\n            ofType {\n              kind\n              name\n              ofType {\n                kind\n                name\n                ofType {\n                  kind\n                  name\n                  ofType {\n                    kind\n                    name\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  "
-
-from uoishelpers.authenticationMiddleware import createAuthentizationSentinel
-sentinel = createAuthentizationSentinel(
-    JWTPUBLICKEY=JWTPUBLICKEYURL,
-    JWTRESOLVEUSERPATH=JWTRESOLVEUSERPATHURL,
-    queriesWOAuthentization=[apolloQuery, graphiQLQuery],
-    onAuthenticationError=lambda item: JSONResponse({"data": None, "errors": ["Unauthenticated", item.query, f"{item.variables}"]}, 
-    status_code=401))
 
 graphql_app = GraphQLRouter(
     schema,
     context_getter=get_context
 )
 
+class Item(BaseModel):
+    query: str
+    variables: dict = None
+    operationName: str = None
+
 @app.get("/gql")
 async def graphiql(request: Request):
     return await graphql_app.render_graphql_ide(request)
+
+from utils.sentinel import sentinel
 
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
@@ -107,7 +96,7 @@ async def apollo_gql(request: Request, item: Item):
         if sentinelResult:
             return sentinelResult
     try:
-        context = await get_context()
+        context = await get_context(request)
         schemaresult = await schema.execute(item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
         # assert 1 == 0, ":)"
     except Exception as e:
@@ -143,3 +132,10 @@ if DEMO:
     logging.info("#                                                  #")
     logging.info("####################################################")
 
+if not DEMO:
+    GQLUG_ENDPOINT_URL = os.environ("GQLUG_ENDPOINT_URL", None)
+    assert GQLUG_ENDPOINT_URL is not None, "GQLUG_ENDPOINT_URL environment variable must be explicitly defined"
+    JWTPUBLICKEY = os.environ("JWTPUBLICKEY", None)
+    assert JWTPUBLICKEY is not None, "JWTPUBLICKEY environment variable must be explicitly defined"
+    JWTRESOLVEUSERPATH = os.environ("JWTRESOLVEUSERPATH", None)
+    assert JWTRESOLVEUSERPATH is not None, "JWTRESOLVEUSERPATH environment variable must be explicitly defined"
