@@ -91,7 +91,7 @@ def Context(LoggedUser, SQLite, LoadersContext):
     return {
         **LoadersContext,
         "": Async_Session_Maker,
-        "u": LoggedUser,
+        "user": LoggedUser,
         "x": "",
         "ug_connection": get_ug_connection
     }
@@ -208,7 +208,7 @@ def ClientExecutorDemo(DemoTrue, ClientExecutor):
 def LoggedUser(DemoData):
     users = DemoData["users"]
     user = users[0]
-    return {**user}
+    return {**user, "id": f'{user["id"]}'}
 
 @pytest.fixture
 def University(DemoData):
