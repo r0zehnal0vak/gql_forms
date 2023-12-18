@@ -158,49 +158,15 @@ from uoishelpers.dataloaders import createIdLoader
 
 @cache
 def composeAuthUrl():
-    hostname = os.environ.get("AUTHURL", "http://localhost:8088/gql")
+    hostname = os.environ.get("GQLUG_ENDPOINT_URL", None)
     assert "://" in hostname, "probably bad formated url, has it 'protocol' part?"
     assert "." not in hostname, "security check failed, change source code"
     return hostname
 
 class AuthorizationLoader(DataLoader):
-    query = """
-        query ($id: ID!) {
-            rolesOnUser(userId: $id) {
-                ...role
-            }
-            rolesOnGroup(groupId: $id) {
-                ...role
-            }
-        }
 
-        fragment role on RoleGQLModel {
-            valid
-            roletype { id }
-            user { id }
-            group { id }
-        }
-    """
-
-
-# {
-#   rbacById(id: "2d9dc5ca-a4a2-11ed-b9df-0242ac120003") {
-#     id
-#     roles {
-#       roletype {
-#         id
-#         name
-#       }
-#       user {
-#         email
-#       }
-#       group {
-#         name
-#       }
-#       valid
-#     }
-#   }
-# }
+    query = """query($id: UUID!){result: rbacById(id: $id) {roles {user { id } group { id } roletype { id }}}}"""
+            # variables = {"id": rbacobject}
 
     roleUrlEndpoint=composeAuthUrl()
     def __init__(self,
@@ -213,9 +179,12 @@ class AuthorizationLoader(DataLoader):
         self.demo = demo
         self.authorizationToken = ""
 
+    def setTokenByInfo(self, info):
+        self.authorizationToken = ""
+
     async def _load(self, id):
         variables = {"id": f"{id}"}
-        headers = {"authorization", f"Bearer {self.authorizationToken}"}
+        headers = {"authorization": f"Bearer {self.authorizationToken}"}
         json = {
             "query": self.query,
             "variables": variables
@@ -232,17 +201,21 @@ class AuthorizationLoader(DataLoader):
                 else:
                     respJson = await resp.json()
 
-        print(respJson)
+        # print(20*"respJson")
+        # print(respJson)
         
-        assert respJson.get("errors", None) is None
+        assert respJson.get("errors", None) is None, respJson["errors"]
         respdata = respJson.get("data", None)
-        assert respdata is not None
-        rolesOnUser = respdata.get("rolesOnUser", None)
-        rolesOnGroup = respdata.get("rolesOnGroup", None)
-        assert rolesOnUser is not None
-        assert rolesOnGroup is not None
+        assert respdata is not None, "missing data response"
+        result = respdata.get("result", None)
+        assert result is not None, "missing result"
+        roles = result.get("roles", None)
+        assert roles is not None, "missing roles"
         
-        return [*rolesOnUser, *rolesOnGroup]
+        # print(30*"=")
+        # print(roles)
+        # print(30*"=")
+        return [*roles]
 
 
     async def batch_load_fn(self, keys):
@@ -503,5 +476,6 @@ def createUgConnectionContext(request):
 
 def getUgConnection(info):
     context = info.context
+    print("getUgConnection.context", context)
     connection = context.get("ug_connection", None)
     return connection

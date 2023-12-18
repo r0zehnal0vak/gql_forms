@@ -1,20 +1,25 @@
 import pytest
-from GraphTypeDefinitions import schema
 
-from ..shared import (
-    prepare_demodata,
-    prepare_in_memory_sqllite,
-    get_demodata,
-    createContext,
-)
+# import os
+# os.environ["GQLUG_ENDPOINT_URL"] = "http://localhost:8124/gql"
+# print(os.environ.get("GQLUG_ENDPOINT_URL", None))
 
-from ..gqlshared import (
+# from ..gqlshared import (
+#     createByIdTest, 
+#     createPageTest, 
+#     createResolveReferenceTest, 
+#     createFrontendQuery, 
+#     createUpdateQuery
+# )
+
+from .gt_utils import (
     createByIdTest, 
     createPageTest, 
     createResolveReferenceTest, 
     createFrontendQuery, 
     createUpdateQuery
 )
+
 
 test_reference_formcategories = createResolveReferenceTest(tableName='formcategories', gqltype='FormCategoryGQLModel', attributeNames=["id", "name", "lastchange"])
 

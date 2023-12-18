@@ -179,9 +179,12 @@ rolelist = [
 #     pass
 
 import requests
-from utils.gql_ug_proxy import gqlproxy
+from utils.gql_ug_proxy import createProxy
 
 def ReadAllRoles():
+    GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
+    gqlproxy = createProxy(GQLUG_ENDPOINT_URL)
+
     query = """query {roleTypePage(limit: 1000) {id, name, nameEn}}"""
     variables = {}
 
@@ -269,11 +272,16 @@ from utils.Dataloaders import getLoadersFromInfo
 async def resolveRoles(info, id):
     return []
 
-from utils.Dataloaders import getUgConnection
+from utils.Dataloaders import getUgConnection, getLoadersFromInfo
+from utils.gql_ug_proxy import createProxy
 
 @cache
-def RoleBasedPermission(roles: str = ""):
+def RoleBasedPermission(roles: str = "", connectionFactory=getUgConnection):
+    GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
+    assert GQLUG_ENDPOINT_URL is not None
+    proxy = createProxy(GQLUG_ENDPOINT_URL)
     roleIdsNeeded = RolesToList(roles)
+
     class RolebasedPermission(BasePermission):
         message = "User has not appropriate roles"
 
@@ -291,15 +299,14 @@ def RoleBasedPermission(roles: str = ""):
             
             #rbacobject
             assert rbacobject is not None, f"RoleBasedPermission cannot be used on {source} as it has None value"
-            rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+            # rbacobject = "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"
+
 
             ## zjistime, jake role jsou vztazeny k rbacobject 
-            query = """query($id: UUID!){result: rbacById(id: $id) {roles {user { id } group { id } roletype { id }}}}"""
-            variables = {"id": rbacobject}
-            connection = getUgConnection(info)
-            response = await connection.asyncpost(query=query, variables=variables)
             # print(response)
-            authorizedroles = response["data"]["result"]["roles"]
+            authloader = getLoadersFromInfo(info=info).authorizations
+            authloader.setTokenByInfo(info)
+            authorizedroles = await authloader.load(rbacobject)
             
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)

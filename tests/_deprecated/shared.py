@@ -71,7 +71,7 @@ async def prepare_demodata(async_session_maker):
 
 
 from utils.Dataloaders import createLoadersContext
-
+from utils.gql_ug_proxy import createProxy
 def createContext(asyncSessionMaker, withuser=True):
     loadersContext = createLoadersContext(asyncSessionMaker)
     user = {
@@ -82,6 +82,10 @@ def createContext(asyncSessionMaker, withuser=True):
     }
     if withuser:
         loadersContext["user"] = user
+
+    GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
+    proxy = createProxy(GQLUG_ENDPOINT_URL)
+    loadersContext["ug_connection"] = proxy.connection(authorizationToken=None)
     
     return loadersContext
 

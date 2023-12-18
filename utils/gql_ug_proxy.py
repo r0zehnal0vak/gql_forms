@@ -7,6 +7,7 @@ from fastapi import Request
 
 @cache
 def createProxy(url):
+    assert url is not None, "createProxy(url) url is None"
     print(f"proxy for {url} created")
     class _Session:
         def __init__(self, authorizationToken):
@@ -43,10 +44,11 @@ def createProxy(url):
     return Proxy()
 
 
-GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
-gqlproxy = createProxy(GQLUG_ENDPOINT_URL)
 
 def get_ug_connection(request: Request):
+    GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
+    gqlproxy = createProxy(GQLUG_ENDPOINT_URL)
+
     authorizationToken = None
     authorizationBrearer = request.headers.get("authorization", None)
     if authorizationBrearer is None:

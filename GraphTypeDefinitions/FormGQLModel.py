@@ -77,6 +77,7 @@ class FormGQLModel(BaseGQLModel):
     async def sections(
         self, info: strawberry.types.Info,
     ) -> typing.List["SectionGQLModel"]:
+        print(info)
         loader = getLoadersFromInfo(info).sections
         sections = await loader.filter_by(form_id=self.id)
         return sections
@@ -111,7 +112,7 @@ async def form_by_id(
     return result
 
 from dataclasses import dataclass
-from .utils import createInputs
+from uoishelpers.resolvers import createInputs
 
 @createInputs
 @dataclass

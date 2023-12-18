@@ -32,7 +32,7 @@ from .SectionGQLModel import SectionGQLModel
 from .PartGQLModel import PartGQLModel
 
 from .externals import UserGQLModel
-
+from ._GraphPermissions import RoleBasedPermission
 
 @strawberry.type(description="""Type for query root""")
 class Query:

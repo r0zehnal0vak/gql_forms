@@ -80,7 +80,7 @@ class RequestGQLModel(BaseGQLModel):
 #
 #############################################################
 from dataclasses import dataclass
-from .utils import createInputs
+from uoishelpers.resolvers import createInputs
 
 @createInputs
 @dataclass
