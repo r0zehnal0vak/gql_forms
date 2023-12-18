@@ -7,7 +7,7 @@ from .gt_utils import (
     createUpdateQuery
 )
 
-test_reference_itemtypes = createResolveReferenceTest(tableName='formitemtypes', gqltype='FormItemTypeGQLModel')
+test_reference_itemtypes = createResolveReferenceTest(tableName='formitemtypes', gqltype='FormItemTypeGQLModel', attributeNames=["id", "items {id}"])
 
 test_query_item_type_by_id = createByIdTest(tableName="formitemtypes", queryEndpoint="formItemTypeById")
 test_query_item_type_page = createPageTest(tableName="formitemtypes", queryEndpoint="formItemTypePage")

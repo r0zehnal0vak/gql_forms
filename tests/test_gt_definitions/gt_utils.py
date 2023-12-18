@@ -83,7 +83,7 @@ def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]
         def testResult(resp):
             print(resp)
             errors = resp.get("errors", None)
-            assert errors is None
+            assert errors is None, errors
             respdata = resp.get("data", None)
             assert respdata is not None
 

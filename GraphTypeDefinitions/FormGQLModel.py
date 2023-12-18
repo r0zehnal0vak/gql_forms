@@ -18,8 +18,8 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_rbacobject,
     createRootResolver_by_id,
     createRootResolver_by_page,
-    createAttributeScalarResolver,
-    createAttributeVectorResolver
+    # createAttributeScalarResolver,
+    # createAttributeVectorResolver
 )
 from ._GraphPermissions import RoleBasedPermission
 

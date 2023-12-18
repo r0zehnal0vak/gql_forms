@@ -33,6 +33,7 @@ from .PartGQLModel import PartGQLModel
 
 from .externals import UserGQLModel
 from ._GraphPermissions import RoleBasedPermission
+from utils.Dataloaders import getUserFromInfo
 
 @strawberry.type(description="""Type for query root""")
 class Query:
@@ -40,7 +41,8 @@ class Query:
     async def say_hello_forms(
         self, info: strawberry.types.Info, id: uuid.UUID
     ) -> Union[str, None]:
-        result = f"Hello {id}"
+        user = getUserFromInfo(info)
+        result = f"Hello {id} `{user}`"
         return result
 
 

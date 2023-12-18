@@ -37,7 +37,7 @@ async def resolve_user(user_id):
     
 @strawberry.field(description="""Who created entity""")
 async def resolve_createdby(self) -> typing.Optional["UserGQLModel"]:
-    return await resolve_user(self.created_by)
+    return await resolve_user(self.createdby)
 
 @strawberry.field(description="""Who made last change""")
 async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
@@ -50,7 +50,7 @@ async def resolve_changedby(self) -> typing.Optional["UserGQLModel"]:
 
 @strawberry.field(description="""RBAC object providing information for resolution of authorizations""")
 async def resolve_rbacobject(self) -> typing.Optional["RBACObjectGQLModel"]:
-    from externals import RBACObjectGQLModel
+    from .externals import RBACObjectGQLModel
     result = None if self.rbacobject is None else await RBACObjectGQLModel.resolve_reference(self.rbacobject_id)
     return result
 
@@ -69,56 +69,62 @@ resolve_cu_result_msg = strawberry.field(graphql_type=str, description="""Should
 For update operation fail should be also stated when bad lastchange has been entered.""")
 
 
-def createAttributeScalarResolver(
-    scalarType: None = None, 
-    foreignKeyName: str = None,
-    description="Retrieves item by its id",
-    permission_classes=()
-    ):
+# def createAttributeScalarResolver(
+#     scalarType: None = None, 
+#     foreignKeyName: str = None,
+#     description="Retrieves item by its id",
+#     permission_classes=()
+#     ):
 
-    assert scalarType is not None
-    assert foreignKeyName is not None
+#     assert scalarType is not None
+#     assert foreignKeyName is not None
 
-    @strawberry.field(description=description, permission_classes=permission_classes)
-    async def foreignkeyScalar(
-        self, info: strawberry.types.Info
-    ) -> typing.Optional[scalarType]:
-        # 👇 self must have an attribute, otherwise it is fail of definition
-        assert hasattr(self, foreignKeyName)
-        id = getattr(self, foreignKeyName, None)
+#     @strawberry.field(description=description, permission_classes=permission_classes)
+#     async def foreignkeyScalar(
+#         self, info: strawberry.types.Info
+#     ) -> typing.Optional[scalarType]:
+#         # 👇 self must have an attribute, otherwise it is fail of definition
+#         assert hasattr(self, foreignKeyName)
+#         id = getattr(self, foreignKeyName, None)
         
-        result = None if id is None else await scalarType.resolve_reference(info=info, id=id)
-        return result
-    return foreignkeyScalar
+#         result = None if id is None else await scalarType.resolve_reference(info=info, id=id)
+#         return result
+#     return foreignkeyScalar
 
-def createAttributeVectorResolver(
-    scalarType: None = None, 
-    whereFilterType: None = None,
-    foreignKeyName: str = None,
-    loaderLambda = lambda info: None, 
-    description="Retrieves items paged", 
-    skip: int=0, 
-    limit: int=10):
+# def createAttributeVectorResolver(
+#     scalarType: None = None, 
+#     whereFilterType: None = None,
+#     foreignKeyName: str = None,
+#     loaderLambda = lambda info: None, 
+#     description="Retrieves items paged", 
+#     skip: int=0, 
+#     limit: int=10):
 
-    assert scalarType is not None
-    assert foreignKeyName is not None
+#     assert scalarType is not None
+#     assert foreignKeyName is not None
+#     assert whereFilterType is not None
 
-    @strawberry.field(description=description)
-    async def foreignkeyVector(
-        self, info: strawberry.types.Info,
-        skip: int = skip,
-        limit: int = limit,
-        where: typing.Optional[whereFilterType] = None
-    ) -> typing.List[scalarType]:
+#     @strawberry.field(description=description)
+#     async def foreignkeyVector(
+#         self, info: strawberry.types.Info,
+#         skip: int = skip,
+#         limit: int = limit,
+#         where: typing.Optional[whereFilterType] = None,
+#         orderby: typing.Optional[str] = None,
+#         desc=None, 
+#     ) -> typing.List[scalarType]:
         
-        params = {foreignKeyName: self.id}
-        loader = loaderLambda(info)
-        assert loader is not None
+#         params = {foreignKeyName: self.id}
+#         loader = loaderLambda(info)
+#         assert loader is not None
         
-        wf = None if where is None else strawberry.asdict(where)
-        result = await loader.page(skip=skip, limit=limit, where=wf, extendedfilter=params)
-        return result
-    return foreignkeyVector
+#         wf = None if where is None else strawberry.asdict(where)
+#         result = await loader.page(
+#             skip=skip, limit=limit, 
+#             extendedfilter=params, 
+#             where=wf, orderby=orderby, desc=desc)
+#         return result
+#     return foreignkeyVector
 
 def createRootResolver_by_id(scalarType: None, description="Retrieves item by its id"):
     assert scalarType is not None

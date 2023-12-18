@@ -20,7 +20,9 @@ from .gt_utils import (
     createUpdateQuery
 )
 
-test_reference_forms = createResolveReferenceTest(tableName='forms', gqltype='FormGQLModel', attributeNames=["id", "name", "lastchange", "valid", "status", "sections {id}", "creator {id}"])
+test_reference_forms = createResolveReferenceTest(
+    tableName='forms', gqltype='FormGQLModel', 
+    attributeNames=["id", "name", "lastchange", "valid", "status", "sections {id}", "creator {id}", "nameEn", "createdby {id}"])
 test_query_form_by_id = createByIdTest(tableName="forms", queryEndpoint="formById")
 test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage")
 
@@ -34,6 +36,11 @@ test_form_insert = createFrontendQuery(query="""
                 id
                 name
                 type { id }
+
+                lastchange
+                created
+                changedby { id }
+                rbacobject { id }                
             }
         }
     }
@@ -79,3 +86,10 @@ test_form_update = createUpdateQuery(
     variables={"id": "190d578c-afb1-11ed-9bd8-0242ac110002", "name": "new name"},
     tableName="forms"
 )
+
+test_hello_forms = createFrontendQuery(query="""
+    query($id: UUID!){ sayHelloForms(id: $id) }""", 
+    variables={"id": "ccde3a8b-81d0-4e2b-9aac-42e0eb2255b3"},
+    asserts=[]
+)
+

@@ -282,6 +282,7 @@ def RoleBasedPermission(roles: str = "", connectionFactory=getUgConnection):
     proxy = createProxy(GQLUG_ENDPOINT_URL)
     roleIdsNeeded = RolesToList(roles)
 
+    from .externals import RBACObjectGQLModel
     class RolebasedPermission(BasePermission):
         message = "User has not appropriate roles"
 
@@ -304,9 +305,11 @@ def RoleBasedPermission(roles: str = "", connectionFactory=getUgConnection):
 
             ## zjistime, jake role jsou vztazeny k rbacobject 
             # print(response)
-            authloader = getLoadersFromInfo(info=info).authorizations
-            authloader.setTokenByInfo(info)
-            authorizedroles = await authloader.load(rbacobject)
+
+            authorizedroles = await RBACObjectGQLModel.resolve_roles(info=info, id=rbacobject)
+            # authloader = getLoadersFromInfo(info=info).authorizations
+            # authloader.setTokenByInfo(info)
+            # authorizedroles = await authloader.load(rbacobject)
             
             print("RolebasedPermission.rbacobject", rbacobject)
             # _ = await self.canEditGroup(session,  source.id, ...)

@@ -18,9 +18,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_createdby,
     resolve_rbacobject,
     createRootResolver_by_id,
-    createRootResolver_by_page,
-    createAttributeScalarResolver,
-    createAttributeVectorResolver
+    createRootResolver_by_page
 )
 
 SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel")]
