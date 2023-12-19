@@ -277,19 +277,22 @@ from utils.gql_ug_proxy import createProxy
 
 @cache
 def RoleBasedPermission(roles: str = "", connectionFactory=getUgConnection):
-    GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
-    assert GQLUG_ENDPOINT_URL is not None
-    proxy = createProxy(GQLUG_ENDPOINT_URL)
     roleIdsNeeded = RolesToList(roles)
 
     from .externals import RBACObjectGQLModel
     class RolebasedPermission(BasePermission):
+
+
         message = "User has not appropriate roles"
 
         async def has_permission(
             self, source, info: strawberry.types.Info, **kwargs
         ) -> bool:
             
+            GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
+            assert GQLUG_ENDPOINT_URL is not None
+            proxy = createProxy(GQLUG_ENDPOINT_URL)
+
             print("RolebasedPermission", self) ##
             print("RolebasedPermission", source) ## self as in GQLModel
             print("RolebasedPermission", kwargs)

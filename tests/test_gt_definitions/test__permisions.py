@@ -142,16 +142,20 @@
 # #     assert testResult, "have to be True"
 # #     pass
 
-from .gt_utils import createFrontendQuery
-test_request_permitted = createFrontendQuery(
-    query="""query ($id: UUID!) {
-        requestById(id: $id) {
-            id
-            name
-            permitted
-            creator { id }
-            histories { id }
-        }
-    }""",
-    variables={"id": "7442f283-f66f-46da-90b2-aa334439c8f6", "name": "new name"}
-)
+# from .gt_utils import createFrontendQuery
+# test_request_permitted = createFrontendQuery(
+#     query="""query ($id: UUID!) {
+#         requestById(id: $id) {
+#             id
+#             name
+#             permitted
+#             creator { id }
+#             histories { id }
+#         }
+#     }""",
+#     variables={"id": "7442f283-f66f-46da-90b2-aa334439c8f6", "name": "new name"}
+# )
+
+# def test_raise(AccessToken):
+#     print(AccessToken)
+#     assert False

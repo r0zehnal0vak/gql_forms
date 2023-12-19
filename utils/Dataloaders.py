@@ -159,6 +159,7 @@ from uoishelpers.dataloaders import createIdLoader
 @cache
 def composeAuthUrl():
     hostname = os.environ.get("GQLUG_ENDPOINT_URL", None)
+    assert hostname is not None, "undefined GQLUG_ENDPOINT_URL"
     assert "://" in hostname, "probably bad formated url, has it 'protocol' part?"
     assert "." not in hostname, "security check failed, change source code"
     return hostname
@@ -168,13 +169,13 @@ class AuthorizationLoader(DataLoader):
     query = """query($id: UUID!){result: rbacById(id: $id) {roles {user { id } group { id } roletype { id }}}}"""
             # variables = {"id": rbacobject}
 
-    roleUrlEndpoint=composeAuthUrl()
+    roleUrlEndpoint=None#composeAuthUrl()
     def __init__(self,
         roleUrlEndpoint=roleUrlEndpoint,
         query=query,
         demo=True):
         super().__init__(cache=True)
-        self.roleUrlEndpoint = roleUrlEndpoint
+        self.roleUrlEndpoint = roleUrlEndpoint if roleUrlEndpoint else composeAuthUrl()
         self.query = query
         self.demo = demo
         self.authorizationToken = ""
