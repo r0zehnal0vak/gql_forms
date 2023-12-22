@@ -22,14 +22,14 @@ from .gt_utils import (
 
 test_reference_forms = createResolveReferenceTest(
     tableName='forms', gqltype='FormGQLModel', 
-    attributeNames=["id", "name", "lastchange", "valid", "status", "sections {id}", "creator {id}", "nameEn", "createdby {id}"])
+    attributeNames=["id", "name", "lastchange", "valid", "status", "creator {id}", "nameEn", "createdby {id}"])
 test_query_form_by_id = createByIdTest(tableName="forms", queryEndpoint="formById")
 test_query_form_page = createPageTest(tableName="forms", queryEndpoint="formPage")
 
 
 test_form_insert = createFrontendQuery(query="""
     mutation($id: UUID!, $name: String!, $rbac_id: UUID!) { 
-        result: formInsert(form: {id: $id, name: $name, rbacId: $rbac_id}) { 
+        result: formInsert(form: {id: $id, name: $name, rbacobject: $rbac_id}) { 
             id
             msg
             form {

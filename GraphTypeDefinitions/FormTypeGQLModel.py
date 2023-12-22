@@ -7,6 +7,7 @@ from typing import Annotated
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
 
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -46,13 +47,17 @@ class FormTypeGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Request's time of last update""")
+    @strawberry.field(
+        description="""Request's time of last update""",
+        permission_classes=[OnlyForAuthentized()])
     async def category(self, info: strawberry.types.Info) -> typing.Optional["FormCategoryGQLModel"]:
         from .FormCategoryGQLModel import FormCategoryGQLModel
         result = await FormCategoryGQLModel.resolve_reference(info, self.category_id)
         return result
     
-    @strawberry.field(description="")
+    @strawberry.field(
+        description="",
+        permission_classes=[OnlyForAuthentized()])
     async def forms(self, info: strawberry.types.Info) -> typing.List["FormGQLModel"]:
         loader = getLoadersFromInfo(info).forms
         rows = await loader.filter_by(type_id=self.id)
@@ -63,7 +68,9 @@ class FormTypeGQLModel(BaseGQLModel):
 #
 #############################################################
 
-@strawberry.field(description="Retrieves the form type")
+@strawberry.field(
+    description="Retrieves the form type",
+    permission_classes=[OnlyForAuthentized()])
 async def form_type_by_id(
     self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[FormTypeGQLModel]:
@@ -83,7 +90,9 @@ class FormTypeWhereFilter:
 
     forms: FormWhereFilter
 
-@strawberry.field(description="Retrieves the form type")
+@strawberry.field(
+    description="Retrieves the form type",
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def form_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: typing.Optional[FormTypeWhereFilter] = None
@@ -127,7 +136,9 @@ For update operation fail should be also stated when bad lastchange has been ent
         result = await FormTypeGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.mutation(description="C operation")
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTypeInsertGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.createdby = uuid.UUID(user["id"])
@@ -138,7 +149,9 @@ async def form_type_insert(self, info: strawberry.types.Info, form_type: FormTyp
     result.id = row.id
     return result
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_type_update(self, info: strawberry.types.Info, form_type: FormTypeUpdateGQLModel) -> FormTypeResultGQLModel:
     user = getUserFromInfo(info)
     form_type.changedby = uuid.UUID(user["id"])

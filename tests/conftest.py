@@ -13,6 +13,8 @@ import pytest_asyncio
 def uuid1():
     return f"{uuid()}"
 
+# serversTestscope = "session"
+serversTestscope = "function"
 
 @pytest.fixture
 def DBModels():
@@ -42,7 +44,7 @@ def DBModels():
         ]
 
 from utils.DBFeeder import get_demodata
-@pytest.fixture
+@pytest.fixture(scope=serversTestscope)
 def DemoData():
     return get_demodata()
 
@@ -75,6 +77,7 @@ async def SQLite(Async_Session_Maker, DemoData, DBModels):
         DBModels=DBModels,
         jsonData=DemoData,
     )    
+    logging.info(f"database loaded (SQLite)")
     return Async_Session_Maker
 
 @pytest.fixture
@@ -84,14 +87,27 @@ def LoadersContext(SQLite):
     return context
 
 @pytest.fixture
-def Context(LoggedUser, SQLite, LoadersContext):
+def Request(AuthorizationHeaders):
+    class Request:
+        @property
+        def headers(self):
+            return AuthorizationHeaders
+        @property
+        def cookies(self):
+            return AuthorizationHeaders
+        
+    return Request()
+
+@pytest.fixture
+def Context(AdminUser, SQLite, LoadersContext, Request):
     from utils.gql_ug_proxy import get_ug_connection
     
     Async_Session_Maker = SQLite
     return {
         **LoadersContext,
+        "request": Request,
         "": Async_Session_Maker,
-        "user": LoggedUser,
+        "user": AdminUser,
         "x": "",
         "ug_connection": get_ug_connection
     }
@@ -150,14 +166,24 @@ def QueriesFile():
 
 @pytest.fixture
 def DemoTrue(monkeypatch):
-    monkeypatch.setenv("Demo", "True")
+    print("setting env DEMO to True")
+    monkeypatch.setenv("DEMO", "True")
+    # import main
+    # main.DEMO = True
+    yield
+    print("end of setting env DEMO to True")
 
 @pytest.fixture
 def DemoFalse(monkeypatch):
-    monkeypatch.setenv("Demo", "False")
+    print("setting env DEMO to False")
+    monkeypatch.setenv("DEMO", "False")
+    # import main
+    # main.DEMO = True
+    yield
+    print("end of setting env DEMO to False")
 
 @pytest.fixture
-def SchemaExecutor(Info, SQLite):
+def SchemaExecutor(SQLite, Info):
     from GraphTypeDefinitions import schema
     async def Execute(query, variable_values={}):
         result = await schema.execute(query=query, variable_values=variable_values, context_value=Info.context)
@@ -171,41 +197,10 @@ def SchemaExecutor(Info, SQLite):
 def SchemaExecutorDemo(DemoTrue, SchemaExecutor):
     return SchemaExecutor
 
-@pytest.fixture
-def FastAPIClient(SQLite):
-    from fastapi.testclient import TestClient
-    import DBDefinitions
-
-    def ComposeCString():
-        return "sqlite+aiosqlite:///:memory:"   
-    DBDefinitions.ComposeConnectionString = ComposeCString
-
-    import main
-    client = TestClient(main.app, raise_server_exceptions=False)   
-    return client
 
 
-@pytest.fixture
-def ClientExecutor(FastAPIClient):
-    async def Execute(query, variable_values={}):
-        json = {
-            "query": query,
-            "variables": variable_values
-        }
-        headers = {"Authorization": "Bearer 2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
-        logging.debug(f"query client for {query} with {variable_values}")
-
-        response = FastAPIClient.post("/gql", headers=headers, json=json)
-        return response.json()       
-    return Execute
-
-@pytest.fixture
-def ClientExecutorDemo(DemoTrue, ClientExecutor):
-    return ClientExecutor
-
-
-@pytest.fixture
-def LoggedUser(DemoData):
+@pytest.fixture(scope=serversTestscope)
+def AdminUser(DemoData):
     users = DemoData["users"]
     user = users[0]
     return {**user, "id": f'{user["id"]}'}
@@ -223,10 +218,10 @@ def RoleTypes(DemoData):
     return roletypes
 
 @pytest.fixture
-def AllRoleResponse(RoleTypes, LoggedUser, University):
+def AllRoleResponse(RoleTypes, AdminUser, University):
     roletypes = RoleTypes
     allRoles = [
-        {"user": {**LoggedUser}, "group": {**University}, "roletype": {**r}}
+        {"user": {**AdminUser}, "group": {**University}, "roletype": {**r}}
         for r in roletypes
     ]
 
@@ -263,7 +258,10 @@ def Env_GQLUG_ENDPOINT_URL_8123(monkeypatch):
     monkeypatch.setenv("GQLUG_ENDPOINT_URL", "http://localhost:8123/gql")
     GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
     assert GQLUG_ENDPOINT_URL == "http://localhost:8123/gql", "GQLUG_ENDPOINT_URL setup failed"
-    return ("GQLUG_ENDPOINT_URL", "http://localhost:8123/gql")
+    print(f"Env GQLUG_ENDPOINT_URL set to {GQLUG_ENDPOINT_URL}")
+    yield ("GQLUG_ENDPOINT_URL", "http://localhost:8123/gql")
+    print(f"End of GQLUG_ENDPOINT_URL set to {GQLUG_ENDPOINT_URL}")
+    return 
 
 @pytest.fixture(autouse=True) # allrole
 def Env_GQLUG_ENDPOINT_URL_8124(monkeypatch):
@@ -271,6 +269,9 @@ def Env_GQLUG_ENDPOINT_URL_8124(monkeypatch):
     monkeypatch.setenv("GQLUG_ENDPOINT_URL", "http://localhost:8124/gql")
     GQLUG_ENDPOINT_URL = os.environ.get("GQLUG_ENDPOINT_URL", None)
     assert GQLUG_ENDPOINT_URL == "http://localhost:8124/gql", "GQLUG_ENDPOINT_URL setup failed"
+    print(f"Env GQLUG_ENDPOINT_URL set to {GQLUG_ENDPOINT_URL}")
+    yield ("GQLUG_ENDPOINT_URL", "http://localhost:8124/gql")
+    print(f"End of GQLUG_ENDPOINT_URL set to {GQLUG_ENDPOINT_URL}")
     # print(40*"#")
     return ("GQLUG_ENDPOINT_URL", "http://localhost:8124/gql")
 
@@ -297,17 +298,286 @@ def runServer(port, response):
    
     _api_process = Process(target=run, daemon=True, kwargs={"response": response, "port": port})
     _api_process.start()
-    print(f"UG_Server started at {port}")
+    print(f"Server started at {port}")
+    logging.info(f"Server started at {port}")
     yield _api_process
     _api_process.terminate()
     _api_process.join()
-    print(f"UG_Server stopped at {port}")
+    assert _api_process.is_alive() == False, "Server still alive :("
+    print(f"Server stopped at {port}")
+    logging.info(f"Server stopped at {port}")
 
-@pytest.fixture(autouse=True)
+
+@pytest.fixture(autouse=True, scope=serversTestscope)
 def NoRole_UG_Server(NoRoleResponse):
     yield from runServer(port=8123, response=NoRoleResponse)
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope=serversTestscope)
 def AllRole_UG_Server(AllRoleResponse):
     yield from runServer(port=8124, response=AllRoleResponse)
 
+def runOAuthServer(port):
+
+    users= [
+        {
+            "id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003",
+            "name": "John",
+            "surname": "Newbie",
+            "email": "john.newbie@world.com"
+        },
+        {
+            "id": "2d9dc868-a4a2-11ed-b9df-0242ac120003",
+            "name": "Julia",
+            "surname": "Newbie",
+            "email": "julia.newbie@world.com"
+        },
+        {
+            "id": "2d9dc9a8-a4a2-11ed-b9df-0242ac120003",
+            "name": "Johnson",
+            "surname": "Newbie",
+            "email": "johnson.newbie@world.com"
+        },
+        {
+            "id": "2d9dcbec-a4a2-11ed-b9df-0242ac120003",
+            "name": "Jepeto",
+            "surname": "Newbie",
+            "email": "jepeto.newbie@world.com"
+        }]
+
+    db_users = [{"id": user["id"], "email": user["email"]} for user in users]
+
+    from mockoauthserver import server as OAuthServer
+    mainapp = fastapi.FastAPI()
+    app = OAuthServer.createServer(db_users=db_users)
+    mainapp.mount("/oauth", app)
+    uvicorn.run(mainapp, port=port)
+
+def runOauth(port):
+    from multiprocessing import Process
+    
+    _api_process = Process(target=runOAuthServer, daemon=True, kwargs={"port": port})
+    _api_process.start()
+    print(f"OAuthServer started at {port}")
+    logging.info(f"OAuthServer started at {port}")
+    yield _api_process
+    _api_process.terminate()
+    _api_process.join()
+    assert _api_process.is_alive() == False, "Server still alive :("
+    print(f"OAuthServer stopped at {port}")
+    logging.info(f"OAuthServer stopped at {port}")
+
+@pytest.fixture(scope=serversTestscope)
+def OAuthport():
+    port = 8125
+    return port
+    
+
+def runUserInfoServer(port, user):
+    from mockoauthserver import server as OAuthServer
+    app = fastapi.FastAPI()
+    
+    @app.get("/oauth/userinfo")
+    def getuserinfo():
+        return user
+    uvicorn.run(app, port=port)
+
+def runUserInfo(port, user):
+    from multiprocessing import Process
+    
+    _api_process = Process(target=runUserInfoServer, daemon=True, kwargs={"port": port, "user": user})
+    _api_process.start()
+    print(f"UserInfoServer started at {port}")
+    logging.info(f"UserInfoServer started at {port}")
+    yield _api_process
+    _api_process.terminate()
+    _api_process.join()
+
+    assert _api_process.is_alive() == False, "Server still alive :("
+    print(f"UserInfoServer stopped at {port}")
+    logging.info(f"UserInfoServer stopped at {port}")
+
+# @pytest.fixture(scope=serversTestscope)
+# def UserInfoServer(monkeypatch, AdminUser):
+#     UserInfoServerPort = 8126
+#     monkeypatch.setenv("JWTRESOLVEUSERPATHURL", f"http://localhost:{UserInfoServerPort}/oauth/userinfo") #/oauth/publickey
+#     logging.info(f"JWTRESOLVEUSERPATHURL set to `http://localhost:{UserInfoServerPort}/oauth/userinfo`")
+#     yield from runUserInfo(UserInfoServerPort, AdminUser)
+
+@pytest.fixture(scope=serversTestscope)
+def OAuthServer(monkeypatch, OAuthport, AdminUser):
+    monkeypatch.setenv("JWTPUBLICKEYURL", f"http://localhost:{OAuthport}/oauth/publickey") #/oauth/publickey
+    logging.info(f"JWTPUBLICKEYURL set to `http://localhost:{OAuthport}/oauth/publickey`")
+    UserInfoServerPort = 8126
+    monkeypatch.setenv("JWTRESOLVEUSERPATHURL", f"http://localhost:{UserInfoServerPort}/oauth/userinfo") #/oauth/publickey
+    logging.info(f"JWTRESOLVEUSERPATHURL set to `http://localhost:{UserInfoServerPort}/oauth/userinfo`")
+
+    yield from zip(runOauth(OAuthport), runUserInfo(UserInfoServerPort, AdminUser))
+
+
+@pytest_asyncio.fixture(autouse=True, scope=serversTestscope)
+async def AccessToken(OAuthport, OAuthServer, AdminUser):
+    import aiohttp 
+    userDict = AdminUser
+    # keyurl = f"http://localhost:{OAuthport}/publickey"
+    loginurl = f"http://localhost:{OAuthport}/oauth/login3"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(loginurl) as resp:
+            assert resp.status == 200, resp
+            accessjson = await resp.json()
+        payload = {
+            "username": userDict["email"],
+            "password": "IDontCare",
+            **accessjson
+        }
+        async with session.post(loginurl, json=payload) as resp:
+            assert resp.status == 200, resp
+            tokendict = await resp.json()
+    token = tokendict["token"] 
+    logging.info(f"have token {token}")
+    yield token
+    logging.info(f"expiring token {token} ")
+
+@pytest_asyncio.fixture
+async def AuthorizationHeaders(AccessToken):
+    result = {}
+    result["authorization"] = f"Bearer {AccessToken}"
+    return result
+
+@pytest.fixture
+def FastAPIClient(SQLite):
+    from fastapi.testclient import TestClient
+    import DBDefinitions
+
+    def ComposeCString():
+        return "sqlite+aiosqlite:///:memory:"   
+    DBDefinitions.ComposeConnectionString = ComposeCString
+
+    import main
+    client = TestClient(main.app, raise_server_exceptions=False)   
+    return client
+
+@pytest.fixture
+def FastAPIClient2():
+    from fastapi.testclient import TestClient
+    import DBDefinitions
+
+    def ComposeCString():
+        return "sqlite+aiosqlite:///:memory:"   
+    DBDefinitions.ComposeConnectionString = ComposeCString
+
+    import main
+    client = TestClient(main.app, raise_server_exceptions=False)   
+    def AcceptHeaders(AuthorizationHeaders):
+        async def Execute(query, variable_values={}):
+            json = {
+                "query": query,
+                "variables": variable_values
+            }
+            headers = AuthorizationHeaders
+            logging.debug(f"query client for {query} with {variable_values} and headers {headers}")
+
+            response = client.post("/gql", headers=headers, json=json)
+            # assert response.status_code == 200, f"Got no 200 response {response}"
+            return response.json()       
+        return Execute
+    return AcceptHeaders
+
+@pytest.fixture
+def FastAPIClient3():
+    from fastapi.testclient import TestClient
+    import DBDefinitions
+
+    def ComposeCString():
+        return "sqlite+aiosqlite:///:memory:"   
+    DBDefinitions.ComposeConnectionString = ComposeCString
+
+    import main
+    client = TestClient(main.app, raise_server_exceptions=False)   
+    def AcceptHeaders(AuthorizationHeaders):
+        async def Execute(query, variable_values={}):
+            json = {
+                "query": query,
+                "variables": variable_values
+            }
+            headers = AuthorizationHeaders
+            logging.debug(f"query client for {query} with {variable_values} and headers {headers}")
+
+            response = client.post("/gql2/", headers=headers, json=json)
+            assert response.status_code == 200, f"Got no 200 response {response}"
+            return response.json()       
+        return Execute
+    return AcceptHeaders
+
+
+@pytest_asyncio.fixture(autouse=True, scope=serversTestscope)
+async def AccessToken2(OAuthport, OAuthServer):
+    async def LoginUser(user):
+        import aiohttp 
+        userDict = user
+        # keyurl = f"http://localhost:{OAuthport}/publickey"
+        loginurl = f"http://localhost:{OAuthport}/oauth/login3"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(loginurl) as resp:
+                assert resp.status == 200, resp
+                accessjson = await resp.json()
+            payload = {
+                "username": userDict["email"],
+                "password": "IDontCare",
+                **accessjson
+            }
+            async with session.post(loginurl, json=payload) as resp:
+                assert resp.status == 200, resp
+                tokendict = await resp.json()
+        token = tokendict["token"] 
+        logging.info(f"have token {token} for {user}")
+        return token
+    return LoginUser
+
+@pytest_asyncio.fixture
+async def ClientExecutorAdmin(FastAPIClient2, AccessToken2, AdminUser):
+    logging.info(f"Logged user is {AdminUser}")
+    token = await AccessToken2(AdminUser)
+    headers = {"authorization": f"Bearer {token}"}
+    return FastAPIClient2(headers)
+
+@pytest_asyncio.fixture
+async def ClientExecutorNoAdmin(FastAPIClient2, AccessToken2, DemoData):
+    table = DemoData["users"]
+    user = table[-1]
+    logging.info(f"Logged user is {user}")
+    token = await AccessToken2(user)
+    headers = {"authorization": f"Bearer {token}"}
+    return FastAPIClient2(headers)
+
+@pytest_asyncio.fixture
+async def ClientExecutorNoAdmin2(FastAPIClient3, AccessToken2, DemoData):
+    table = DemoData["users"]
+    user = table[-1]
+    logging.info(f"Logged user is {user}")
+    token = await AccessToken2(user)
+    headers = {"authorization": f"Bearer {token}"}
+    return FastAPIClient3(headers)
+
+
+@pytest.fixture
+def ClientExecutor(FastAPIClient, AuthorizationHeaders):
+    async def Execute(query, variable_values={}):
+        json = {
+            "query": query,
+            "variables": variable_values
+        }
+        headers = AuthorizationHeaders
+        logging.debug(f"query client for {query} with {variable_values} and headers {headers}")
+
+        response = FastAPIClient.post("/gql", headers=headers, json=json)
+        # assert response.status_code == 200, f"Got no 200 response {response}"
+        return response.json()       
+    return Execute
+
+@pytest.fixture
+def ClientExecutorDemo(DemoTrue, ClientExecutor):
+    return ClientExecutor
+
+@pytest.fixture
+def ClientExecutorNoDemo(DemoFalse, ClientExecutor):
+    return ClientExecutor

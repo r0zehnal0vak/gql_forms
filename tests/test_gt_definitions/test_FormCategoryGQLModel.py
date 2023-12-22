@@ -34,6 +34,7 @@ test_insert_form_category = createFrontendQuery(
             category {
                 id
                 name
+                formTypes { id }
             }
         }
     }""",

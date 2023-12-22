@@ -7,7 +7,7 @@ from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -51,13 +51,17 @@ class HistoryGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Request which history belongs to""")
+    @strawberry.field(
+        description="""Request which history belongs to""",
+        permission_classes=[OnlyForAuthentized()])
     async def request(self, info: strawberry.types.Info) -> typing.Optional["RequestGQLModel"]:
         from .RequestGQLModel import RequestGQLModel
         result = await RequestGQLModel.resolve_reference(info, self.request_id)
         return result
 
-    @strawberry.field(description="""History form""")
+    @strawberry.field(
+        description="""History form""",
+        permission_classes=[OnlyForAuthentized()])
     async def form(self, info: strawberry.types.Info) -> typing.Optional["FormGQLModel"]:
         from .FormGQLModel import FormGQLModel
         result = await FormGQLModel.resolve_reference(info, self.form_id)
@@ -69,7 +73,11 @@ class HistoryGQLModel(BaseGQLModel):
 # Queries
 #
 #############################################################
-
+@strawberry.field(
+    description="returns the history result by its id",
+    permission_classes=[OnlyForAuthentized()])
+async def form_history_by_id(self, info: strawberry.types.Info, id: uuid.UUID) -> typing.Optional[HistoryGQLModel]:
+    return await HistoryGQLModel.resolve_reference(info=info, id=id)
 #############################################################
 #
 # Mutations
@@ -105,7 +113,9 @@ For update operation fail should be also stated when bad lastchange has been ent
         result = await HistoryGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.mutation(description="C operation")
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def history_insert(self, info: strawberry.types.Info, history: HistoryInsertGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.createdby = uuid.UUID(user["id"])
@@ -116,7 +126,9 @@ async def history_insert(self, info: strawberry.types.Info, history: HistoryInse
     result.id = row.id
     return result
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def history_update(self, info: strawberry.types.Info, history: HistoryUpdateGQLModel) -> HistoryResultGQLModel:
     user = getUserFromInfo(info)
     history.changedby = uuid.UUID(user["id"])

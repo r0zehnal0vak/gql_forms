@@ -7,7 +7,7 @@ from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -47,17 +47,23 @@ class PartGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Part's order""")
+    @strawberry.field(
+        description="""Part's order""",
+        permission_classes=[OnlyForAuthentized()])
     def order(self) -> int:
         return self.order
 
-    @strawberry.field(description="Retrieves the section owning this part")
+    @strawberry.field(
+        description="Retrieves the section owning this part",
+        permission_classes=[OnlyForAuthentized()])
     async def section(self, info: strawberry.types.Info) -> typing.Optional["SectionGQLModel"]:
         from .SectionGQLModel import SectionGQLModel
         result = await SectionGQLModel.resolve_reference(info, self.section_id)
         return result
 
-    @strawberry.field(description="Retrieves the items related to this part")
+    @strawberry.field(
+        description="Retrieves the items related to this part",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def items(self, info: strawberry.types.Info) -> typing.List["ItemGQLModel"]:
         loader = getLoadersFromInfo(info).items
         result = await loader.filter_by(part_id=self.id)
@@ -74,6 +80,11 @@ class PartGQLModel(BaseGQLModel):
 #     result = await loader.load(id)
 #     return result
 
+@strawberry.field(
+    description="returns part of section by its id",
+    permission_classes=[OnlyForAuthentized()])
+async def form_part_by_id(self, info: strawberry.types.Info, id: uuid.UUID) -> typing.Optional[PartGQLModel]:
+    return await PartGQLModel.resolve_reference(info=info, id=id)
 #############################################################
 #
 # Mutations
@@ -84,6 +95,7 @@ class PartGQLModel(BaseGQLModel):
 class FormPartInsertGQLModel:
     name: str = strawberry.field(description="Part name")
     section_id: uuid.UUID
+    name_en: typing.Optional[str] = strawberry.field(description="English part name", default=None)
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     createdby: strawberry.Private[uuid.UUID] = None 
@@ -95,6 +107,7 @@ class FormPartUpdateGQLModel:
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
     section_id: typing.Optional[uuid.UUID] = strawberry.field(description="id of parent entity", default=None)
     name: typing.Optional[str] = strawberry.field(description="Part name", default=None)
+    name_en: typing.Optional[str] = strawberry.field(description="English part name", default=None)
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     changedby: strawberry.Private[uuid.UUID] = None
 
@@ -109,7 +122,9 @@ For update operation fail should be also stated when bad lastchange has been ent
         result = await PartGQLModel.resolve_reference(info=info, id=self.id)
         return result
 
-@strawberry.field(description="C operation")
+@strawberry.field(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQLModel) -> FormPartResultGQLModel:
     user = getUserFromInfo(info)
     part.createdby = uuid.UUID(user["id"])
@@ -130,7 +145,9 @@ async def part_insert(self, info: strawberry.types.Info, part: FormPartInsertGQL
         result.id = row.id
     return result
 
-@strawberry.field(description="U operation")
+@strawberry.field(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def part_update(self, info: strawberry.types.Info, part: FormPartUpdateGQLModel) -> FormPartResultGQLModel:
     user = getUserFromInfo(info)
     part.changedby = uuid.UUID(user["id"])

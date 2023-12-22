@@ -20,6 +20,7 @@ test_insert_item_category = createFrontendQuery(
             category {
                 id
                 name
+                types { id }
             }
         }
     }""",

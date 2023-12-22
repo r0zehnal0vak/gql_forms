@@ -61,8 +61,8 @@ def get_demodata():
 
 async def initDB(asyncSessionMaker):
 
-    defaultNoDemo = "False"
-    if defaultNoDemo == os.environ.get("DEMO", "True"):
+    demoMode = os.environ.get("DEMO", "False")
+    if demoMode == "False":
         dbModels = [
             FormCategoryModel,
             FormTypeModel,

@@ -27,10 +27,10 @@ async def initEngine(app: FastAPI):
     from DBDefinitions import startEngine, ComposeConnectionString
 
     connectionstring = ComposeConnectionString()
-
+    makeDrop = os.getenv("DEMO", None) == "True"
     asyncSessionMaker = await startEngine(
         connectionstring=connectionstring,
-        makeDrop=True,
+        makeDrop=makeDrop,
         makeUp=True
     )
 
@@ -46,6 +46,7 @@ async def initEngine(app: FastAPI):
 
 
 from GraphTypeDefinitions import schema
+from utils.sentinel import sentinel
 
 async def get_context(request: Request):
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
@@ -55,9 +56,18 @@ async def get_context(request: Request):
         
     from utils.Dataloaders import createLoadersContext, createUgConnectionContext
     context = createLoadersContext(appcontext["asyncSessionMaker"])
-    
+    i = Item(query = "")
+    # i.query = ""
+    # i.variables = {}
+    logging.info(f"before sentinel current user is {request.scope.get('user', None)}")
+    await sentinel(request, i)
+    logging.info(f"after sentinel current user is {request.scope.get('user', None)}")
     connectionContext = createUgConnectionContext(request=request)
-    return {**context, **connectionContext}
+    result = {**context, **connectionContext}
+    result["request"] = request
+    result["user"] = request.scope.get("user", None)
+    logging.info(f"context created {result}")
+    return result
 
 app = FastAPI(lifespan=initEngine)
 
@@ -80,8 +90,10 @@ graphql_app = GraphQLRouter(
 
 class Item(BaseModel):
     query: str
-    variables: dict = None
+    variables: dict = {}
     operationName: str = None
+
+app.include_router(graphql_app, prefix="/gql2")
 
 @app.get("/gql")
 async def graphiql(request: Request):
@@ -91,17 +103,28 @@ from utils.sentinel import sentinel
 
 @app.post("/gql")
 async def apollo_gql(request: Request, item: Item):
-    if not DEMO:
+    DEMOE = os.getenv("DEMO", None)
+    # logging.info(f"apollo_gql DEMO {DEMOE} {type(DEMOE)}, {DEMO}")
+    if DEMOE == "False":
+        logging.info(f"asking sentinel for advice (is user authenticated?)")
         sentinelResult = await sentinel(request, item)
         if sentinelResult:
             return sentinelResult
+        logging.info(f"sentinel test passed for user {request.scope['user']}")
+    else:
+        request.scope["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
+        logging.info(f"sentinel skippend because of DEMO mode")
     try:
         context = await get_context(request)
-        schemaresult = await schema.execute(item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
+        logging.info(f"executing \n {item.query} \n with \n {item.variables}")
+        schemaresult = await schema.execute(query=item.query, variable_values=item.variables, operation_name=item.operationName, context_value=context)
+        # schemaresult = await schema.execute(query=item.query, variable_values=item.variables, context_value=context)
         # assert 1 == 0, ":)"
     except Exception as e:
+        logging.info(f"error during schema execute {e}")
         return {"data": None, "errors": [f"{type(e).__name__}: {e}"]}
     
+    logging.info(f"schema execute result \n{schemaresult}")
     result = {"data": schemaresult.data}
     if schemaresult.errors:
         result["errors"] = [f"{error}" for error in schemaresult.errors]
@@ -133,9 +156,9 @@ if DEMO:
     logging.info("####################################################")
 
 if not DEMO:
-    GQLUG_ENDPOINT_URL = os.environ("GQLUG_ENDPOINT_URL", None)
+    GQLUG_ENDPOINT_URL = os.getenv("GQLUG_ENDPOINT_URL", None)
     assert GQLUG_ENDPOINT_URL is not None, "GQLUG_ENDPOINT_URL environment variable must be explicitly defined"
-    JWTPUBLICKEY = os.environ("JWTPUBLICKEY", None)
-    assert JWTPUBLICKEY is not None, "JWTPUBLICKEY environment variable must be explicitly defined"
-    JWTRESOLVEUSERPATH = os.environ("JWTRESOLVEUSERPATH", None)
-    assert JWTRESOLVEUSERPATH is not None, "JWTRESOLVEUSERPATH environment variable must be explicitly defined"
+    JWTPUBLICKEYURL = os.getenv("JWTPUBLICKEYURL", None)
+    assert JWTPUBLICKEYURL is not None, "JWTPUBLICKEYURL environment variable must be explicitly defined"
+    JWTRESOLVEUSERPATHURL = os.getenv("JWTRESOLVEUSERPATHURL", None)
+    assert JWTRESOLVEUSERPATHURL is not None, "JWTRESOLVEUSERPATHURL environment variable must be explicitly defined"

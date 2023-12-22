@@ -2,13 +2,14 @@ import strawberry
 import datetime
 import typing
 import uuid
+import logging
 
 from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from GraphTypeDefinitions._GraphPermissions import RoleBasedPermission
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -53,20 +54,25 @@ class RequestGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(
-        description="""Permitted attribute""",
-        permission_classes=[RoleBasedPermission(roles="rector")]
-        )
-    def permitted() -> str:
-        return "OK"
+    # @strawberry.field(
+    #     description="""Permitted attribute""",
+    #     # extensions=[strawberry.permission.PermissionExtension(fail_silently=True, permissions=[RoleBasedPermission(roles="rector")])]
+    #     permission_classes=[RoleBasedPermission(roles="rector", whatreturn=None)]
+    #     )
+    # def permitted() -> typing.Optional[str]:
+    #     return "OK"
 
-    @strawberry.field(description="""Request's time of last update""")
+    @strawberry.field(
+        description="""Request's time of last update""",
+        permission_classes=[OnlyForAuthentized()])
     def creator(self) -> typing.Optional["UserGQLModel"]:
         from .externals import UserGQLModel
         #result = await UserGQLModel.resolve_reference(id=self.createdby)
         return UserGQLModel(id=self.createdby)
 
-    @strawberry.field(description="""Request's time of last update""")
+    @strawberry.field(
+        description="""Request's time of last update""",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def histories(self, info: strawberry.types.Info) -> typing.List["HistoryGQLModel"]:
         loader = getLoadersFromInfo(info).histories
         result = await loader.filter_by(request_id=self.id)
@@ -87,21 +93,33 @@ class RequestWhereFilter:
     name_en: str
     createdby: uuid.UUID
 
-@strawberry.field(description="""Finds an request by their id""")
+@strawberry.field(
+    description="""Finds an request by their id""",
+    permission_classes=[OnlyForAuthentized()])
 async def request_by_id(
     self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[RequestGQLModel]:
     result = await RequestGQLModel.resolve_reference(info, id)
     return result
 
-requests_page = createRootResolver_by_page(
-    scalarType=RequestGQLModel,
-    whereFilterType=RequestWhereFilter,
+# requests_page = createRootResolver_by_page(
+#     scalarType=RequestGQLModel,
+#     whereFilterType=RequestWhereFilter,
+#     description="Retrieves all requests",
+#     loaderLambda=lambda info: getLoadersFromInfo(info).requests,
+#     skip=0,
+#     limit=10
+#     )
+from ._GraphResolvers import asPage
+
+@strawberry.field(
     description="Retrieves all requests",
-    loaderLambda=lambda info: getLoadersFromInfo(info).requests,
-    skip=0,
-    limit=10
-    )
+    permission_classes=[OnlyForAuthentized(isList=True)])
+@asPage
+#async def request_page(self, info: strawberry.types.Info, where: typing.Optional[RequestWhereFilter] = None) -> typing.List[RequestGQLModel]:
+async def request_page(self, info: strawberry.types.Info, where: typing.Optional[RequestWhereFilter]) -> typing.List[RequestGQLModel]:
+    logging.info("returning just loader")
+    return getLoadersFromInfo(info).requests
 
 #############################################################
 #
@@ -134,7 +152,9 @@ For update operation fail should be also stated when bad lastchange has been ent
     async def request(self, info: strawberry.types.Info) -> RequestGQLModel:
         return await RequestGQLModel.resolve_reference(info, self.id)
 
-@strawberry.mutation(description="C operation")
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_request_insert(self, info: strawberry.types.Info, request: FormRequestInsertGQLModel) -> FormRequestResultGQLModel:
     user = getUserFromInfo(info)
     request.createdby = uuid.UUID(user["id"])
@@ -146,7 +166,9 @@ async def form_request_insert(self, info: strawberry.types.Info, request: FormRe
     result.id = row.id
     return result
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_request_update(self, info: strawberry.types.Info, request: FormRequestUpdateGQLModel) -> FormRequestResultGQLModel:
     user = getUserFromInfo(info)
     request.changedby = uuid.UUID(user["id"])

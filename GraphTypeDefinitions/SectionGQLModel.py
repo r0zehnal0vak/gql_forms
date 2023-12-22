@@ -7,7 +7,7 @@ from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -47,17 +47,23 @@ class SectionGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Section's order""")
+    @strawberry.field(
+        description="""Section's order""",
+        permission_classes=[OnlyForAuthentized()])
     def order(self) -> int:
         return self.order if self.order else 0
 
-    @strawberry.field(description="Retrieves the parts related to this section")
+    @strawberry.field(
+        description="Retrieves the parts related to this section",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def parts(self, info: strawberry.types.Info) -> typing.List["PartGQLModel"]:
         loader = getLoadersFromInfo(info).parts
         result = await loader.filter_by(section_id=self.id)
         return result
 
-    @strawberry.field(description="Retrieves the form owing this section")
+    @strawberry.field(
+        description="Retrieves the form owing this section",
+        permission_classes=[OnlyForAuthentized()])
     async def form(self, info: strawberry.types.Info) -> typing.Optional["FormGQLModel"]:
         from .FormGQLModel import FormGQLModel
         result = await FormGQLModel.resolve_reference(info, self.form_id)
@@ -90,6 +96,12 @@ class SectionWhereFilter:
 #     foreignKeyName="from_id", description="Gets sections associated with form",
 #     loaderLambda=lambda info: getLoadersFromInfo(info=info).sections
 #     )
+    
+@strawberry.field(
+    description="returns section from form by its id",
+    permission_classes=[OnlyForAuthentized()])
+async def form_section_by_id(self, info: strawberry.types.Info, id: uuid.UUID) -> typing.Optional[SectionGQLModel]:
+    return await SectionGQLModel.resolve_reference(info=info, id=id)
 #############################################################
 #
 # Mutations
@@ -100,6 +112,8 @@ class SectionWhereFilter:
 class SectionInsertGQLModel:
     name: str = strawberry.field(description="Section name")
     form_id: uuid.UUID = strawberry.field(description="id of parent entity")
+
+    name_en: typing.Optional[str] = strawberry.field(description="Section english name", default=None)
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     valid: typing.Optional[bool] = None
@@ -110,7 +124,9 @@ class SectionInsertGQLModel:
 class SectionUpdateGQLModel:
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
     lastchange: datetime.datetime = strawberry.field(description="timestamp of last change = TOKEN")
+
     name: typing.Optional[str] = strawberry.field(description="Section name", default=None)
+    name_en: typing.Optional[str] = strawberry.field(description="Section english name", default=None)
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     valid: typing.Optional[bool] = None
     changedby: strawberry.Private[uuid.UUID] = None
@@ -125,7 +141,9 @@ For update operation fail should be also stated when bad lastchange has been ent
     async def section(self, info: strawberry.types.Info) -> SectionGQLModel:
         return await SectionGQLModel.resolve_reference(info, self.id)
 
-@strawberry.mutation(description="C operation")
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def section_insert(self, info: strawberry.types.Info, section: SectionInsertGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.createdby = uuid.UUID(user["id"])
@@ -146,7 +164,9 @@ async def section_insert(self, info: strawberry.types.Info, section: SectionInse
     print("section_insert", result)
     return result
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def section_update(self, info: strawberry.types.Info, section: SectionUpdateGQLModel) -> SectionResultGQLModel:
     user = getUserFromInfo(info)
     section.changedby = uuid.UUID(user["id"])

@@ -9,7 +9,7 @@ from .gt_utils import (
 
 test_reference_requests = createResolveReferenceTest(tableName='formrequests', gqltype='RequestGQLModel')
 test_query_request_by_id = createByIdTest(tableName="formrequests", queryEndpoint="requestById")
-test_query_request_page = createPageTest(tableName="formrequests", queryEndpoint="requestsPage")
+test_query_request_page = createPageTest(tableName="formrequests", queryEndpoint="requestPage")
 
 test_resolve_request = createResolveReferenceTest('formrequests', 'RequestGQLModel', ['id', 'lastchange'])
 

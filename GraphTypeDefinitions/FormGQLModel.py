@@ -2,6 +2,7 @@ import strawberry
 import typing
 import datetime
 import uuid
+import logging
 
 from typing import Annotated
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
@@ -21,7 +22,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     # createAttributeScalarResolver,
     # createAttributeVectorResolver
 )
-from ._GraphPermissions import RoleBasedPermission
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 
 SectionGQLModel = Annotated["SectionGQLModel", strawberry.lazy(".SectionGQLModel")]
 FormTypeGQLModel = Annotated["FormTypeGQLModel", strawberry.lazy(".FormTypeGQLModel")]
@@ -47,7 +48,9 @@ class FormGQLModel(BaseGQLModel):
     """
     @classmethod
     def getLoader(cls, info):
-        return getLoadersFromInfo(info).forms
+        loader = getLoadersFromInfo(info).forms
+        # logging.info(f"FormGQLModel.getLoader => {loader}")
+        return loader
     
     # @classmethod
     # async def resolve_reference(cls, info: strawberry.types.Info, id: uuid.UUID):
@@ -62,27 +65,46 @@ class FormGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Form's validity""")
+    @strawberry.field(
+        description="""Form's validity""",
+        permission_classes=[OnlyForAuthentized()])
     def valid(self) -> bool:
         return self.valid
 
-    @strawberry.field(description="""Form's status""")
+    @strawberry.field(
+        description="""Form's status""",
+        permission_classes=[OnlyForAuthentized()])
     def status(self) -> typing.Optional[str]:
         return self.status
 
+    # @strawberry.field(
+    #     description="Retrieves the sections related to this form (form has several sections), form->section->part->item",
+    #     permission_classes=[OnlyForAuthentized(isList=True)],
+    #     # extensions=[strawberry.permission.PermissionExtension(fail_silently=True, permissions=[RoleBasedPermission(roles="administrator")])]
+    #     )
+    # async def sections(
+    #     self, info: strawberry.types.Info,
+    # ) -> typing.List["SectionGQLModel"]:
+    #     print(info)
+    #     loader = getLoadersFromInfo(info).sections
+    #     sections = await loader.filter_by(form_id=self.id)
+    #     return sections
+
+    from ._GraphResolvers import asForeignList
+
     @strawberry.field(
         description="Retrieves the sections related to this form (form has several sections), form->section->part->item",
-        permission_classes=[RoleBasedPermission(roles="administrator")]
+        permission_classes=[OnlyForAuthentized(isList=True)],
         )
+    @asForeignList(foreignKeyName="form_id")
     async def sections(
         self, info: strawberry.types.Info,
     ) -> typing.List["SectionGQLModel"]:
-        print(info)
-        loader = getLoadersFromInfo(info).sections
-        sections = await loader.filter_by(form_id=self.id)
-        return sections
+        return getLoadersFromInfo(info).sections
 
-    @strawberry.field(description="Retrieves the user who has initiated this request")
+    @strawberry.field(
+        description="Retrieves the user who has initiated this request",
+        permission_classes=[OnlyForAuthentized()])
     async def creator(self, info: strawberry.types.Info) -> typing.Optional["UserGQLModel"]:
         #user = UserGQLModel(id=self.createdby)
         from .externals import UserGQLModel
@@ -92,7 +114,9 @@ class FormGQLModel(BaseGQLModel):
         )
         return result
 
-    @strawberry.field(description="Retrieves the type of form")
+    @strawberry.field(
+        description="Retrieves the type of form",
+        permission_classes=[OnlyForAuthentized()])
     async def type(self, info: strawberry.types.Info) -> typing.Optional["FormTypeGQLModel"]:
         from .FormTypeGQLModel import FormTypeGQLModel
         result = await FormTypeGQLModel.resolve_reference(info, id=self.type_id)
@@ -103,12 +127,16 @@ class FormGQLModel(BaseGQLModel):
 # Queries
 #
 #############################################################
-
-@strawberry.field(description="Retrieves the form type")
+from ._GraphPermissions import OnlyForAuthentized
+@strawberry.field(
+    description="Retrieves the form type",
+    permission_classes=[OnlyForAuthentized()])
 async def form_by_id(
     self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[FormGQLModel]:
+    # logging.info(f"form_by_id ({id})")
     result = await FormGQLModel.resolve_reference(info=info, id=id)
+    # logging.info(f"form_by_id ({result})")
     return result
 
 from dataclasses import dataclass
@@ -126,20 +154,34 @@ class FormWhereFilter:
     from .FormTypeGQLModel import FormTypeWhereFilter
     type: FormTypeWhereFilter
 
-@strawberry.field(description="Retrieves the form type")
+# @strawberry.field(
+#     description="Retrieves the form type",
+#     permission_classes=[OnlyForAuthentized()])
+# async def form_page(
+#     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
+#     where: typing.Optional[FormWhereFilter] = None
+# ) -> typing.List[FormGQLModel]:
+#     # print(info)
+#     # context = info.context
+#     # request = context["request"]
+#     # user = request.scope["user"]
+#     # print(user)
+#     wf = None if where is None else strawberry.asdict(where)
+#     loader = getLoadersFromInfo(info).forms
+#     result = await loader.page(skip, limit, where=wf)
+#     return result    
+
+from ._GraphResolvers import asPage
+
+@strawberry.field(
+    description="Retrieves the form type",
+    permission_classes=[OnlyForAuthentized()])
+@asPage
 async def form_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10,
     where: typing.Optional[FormWhereFilter] = None
 ) -> typing.List[FormGQLModel]:
-    # print(info)
-    # context = info.context
-    # request = context["request"]
-    # user = request.scope["user"]
-    # print(user)
-    wf = None if where is None else strawberry.asdict(where)
-    loader = getLoadersFromInfo(info).forms
-    result = await loader.page(skip, limit, where=wf)
-    return result    
+    return getLoadersFromInfo(info).forms
 
 
 
@@ -153,7 +195,8 @@ async def form_page(
 class FormInsertGQLModel:
     name: str = strawberry.field(description="form name")
     type_id: uuid.UUID = strawberry.field(description="form type")
-    rbac_id: uuid.UUID = strawberry.field(description="user_id or group_id, allows resolution of authorized users")
+    rbacobject: typing.Optional[uuid.UUID] = strawberry.field(
+        description="user_id or group_id, allows resolution of authorized users, if not present, logged user will be assigned", default=None)
     
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     name_en: typing.Optional[str] = strawberry.field(description="form name", default=None)
@@ -184,17 +227,26 @@ For update operation fail should be also stated when bad lastchange has been ent
         result = await FormGQLModel.resolve_reference(info, self.id)
         return result
    
-
-@strawberry.mutation(description="C operation")
+from ._GraphPermissions import OnlyForAuthentized
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_insert(self, info: strawberry.types.Info, form: FormInsertGQLModel) -> FormResultGQLModel:
     user = getUserFromInfo(info)
-    form.createdby = uuid.UUID(user["id"])
+    user_id = user["id"]
+    user_id = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
+    form.createdby = user_id
+    if form.rbacobject is None:
+        form.rbacobject = user_id
+
     loader = getLoadersFromInfo(info).forms
     row = await loader.insert(form)
     result = FormResultGQLModel(id=row.id, msg="ok")
     return result
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_update(self, info: strawberry.types.Info, form: FormUpdateGQLModel) -> FormResultGQLModel:
     user = getUserFromInfo(info)
     form.changedby = uuid.UUID(user["id"])

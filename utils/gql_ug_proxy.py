@@ -13,15 +13,15 @@ def createProxy(url):
         def __init__(self, authorizationToken):
             self.authorizationToken = authorizationToken
             
-        async def asyncpost(self, query, variables={}):
-            async with aiohttp.ClientSession() as session:
-                json = {"query": query, "variables": variables}
-                headers = {}
-                if self.authorizationToken:
-                    headers["authorization"] = f"Bearer {self.authorizationToken}"
-                async with session.post(url=url, json=json, headers=headers) as response:
-                    responsejson = await response.json()
-                    return responsejson
+        # async def asyncpost(self, query, variables={}):
+        #     async with aiohttp.ClientSession() as session:
+        #         json = {"query": query, "variables": variables}
+        #         headers = {}
+        #         if self.authorizationToken:
+        #             headers["authorization"] = f"Bearer {self.authorizationToken}"
+        #         async with session.post(url=url, json=json, headers=headers) as response:
+        #             responsejson = await response.json()
+        #             return responsejson
         
     class Proxy:
         @asynccontextmanager

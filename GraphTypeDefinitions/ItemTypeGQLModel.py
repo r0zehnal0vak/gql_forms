@@ -7,7 +7,7 @@ from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -47,12 +47,16 @@ class ItemTypeGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Type category""")
+    @strawberry.field(
+        description="""Type category""",
+        permission_classes=[OnlyForAuthentized()])
     async def category(self, info: strawberry.types.Info) -> typing.Optional["ItemCategoryGQLModel"]:
         from .ItemCategoryGQLModel import ItemCategoryGQLModel
         return await ItemCategoryGQLModel.resolve_reference(info=info, id=self.category_id)
     
-    @strawberry.field(description="")
+    @strawberry.field(
+        description="",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def items(self, info: strawberry.types.Info) -> typing.List["ItemGQLModel"]:
         loader = getLoadersFromInfo(info).items
         rows = await loader.filter_by(type_id=self.id)
@@ -63,7 +67,9 @@ class ItemTypeGQLModel(BaseGQLModel):
 #
 #############################################################
 
-@strawberry.field(description="Retrieves the item types")
+@strawberry.field(
+    description="Retrieves the item types",
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def item_type_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 10
 ) -> typing.List[ItemCategoryGQLModel]:
@@ -72,7 +78,9 @@ async def item_type_page(
     return result
 
 
-@strawberry.field(description="Retrieves the item type")
+@strawberry.field(
+    description="Retrieves the item type",
+    permission_classes=[OnlyForAuthentized()])
 async def item_type_by_id(
     self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[ItemTypeGQLModel]:
@@ -112,7 +120,9 @@ For update operation fail should be also stated when bad lastchange has been ent
         result = await ItemTypeGQLModel.resolve_reference(info, self.id)
         return result
 
-@strawberry.mutation(description="C operation")
+@strawberry.mutation(
+    description="C operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_item_type_insert(self, info: strawberry.types.Info, item_type: FormItemTypeInsertGQLModel) -> FormItemTypeResultGQLModel:
     user = getUserFromInfo(info)
     item_type.createdby = uuid.UUID(user["id"])
@@ -124,7 +134,9 @@ async def form_item_type_insert(self, info: strawberry.types.Info, item_type: Fo
     return result
 
 
-@strawberry.mutation(description="U operation")
+@strawberry.mutation(
+    description="U operation",
+    permission_classes=[OnlyForAuthentized()])
 async def form_item_type_update(self, info: strawberry.types.Info, item_type: FormItemTypeUpdateGQLModel) -> FormItemTypeResultGQLModel:
     user = getUserFromInfo(info)
     item_type.changedby = uuid.UUID(user["id"])

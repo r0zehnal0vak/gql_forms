@@ -48,10 +48,13 @@ class Query:
 
     from .RequestGQLModel import (
         request_by_id, 
-        requests_page
+        request_page
     )
     request_by_id = request_by_id
-    requests_page = requests_page
+    request_page = request_page
+
+    from .HistoryGQLModel import form_history_by_id
+    form_history_by_id = form_history_by_id
 
     from .FormGQLModel import (
         form_by_id, 
@@ -59,6 +62,7 @@ class Query:
     )
     form_by_id = form_by_id
     form_page = form_page
+    
 
     from .FormTypeGQLModel import (
         form_type_by_id,
@@ -73,6 +77,12 @@ class Query:
     )
     form_category_by_id = form_category_by_id
     form_category_page = form_category_page
+
+    from .SectionGQLModel import form_section_by_id
+    form_section_by_id = form_section_by_id
+
+    from .PartGQLModel import form_part_by_id
+    form_part_by_id = form_part_by_id
 
     from .ItemGQLModel import (
         item_by_id, item_page

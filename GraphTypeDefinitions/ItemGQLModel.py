@@ -7,7 +7,7 @@ from typing import Annotated
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import RoleBasedPermission, OnlyForAuthentized
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -55,21 +55,29 @@ class ItemGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="""Item's order""")
+    @strawberry.field(
+        description="""Item's order""",
+        permission_classes=[OnlyForAuthentized()])
     def order(self) -> int:
         return self.order if self.order else 0
 
-    @strawberry.field(description="""Item's value """)
+    @strawberry.field(
+        description="""Item's value """,
+        permission_classes=[OnlyForAuthentized()])
     def value(self) -> str:
         return self.value
 
-    @strawberry.field(description="Retrieves the part owning the item")
+    @strawberry.field(
+        description="Retrieves the part owning the item",
+        permission_classes=[OnlyForAuthentized()])
     async def part(self, info: strawberry.types.Info) -> typing.Optional["PartGQLModel"]:
         from .PartGQLModel import PartGQLModel
         result = await PartGQLModel.resolve_reference(info, self.part_id)
         return result
 
-    @strawberry.field(description="Retrieves the item type")
+    @strawberry.field(
+        description="Retrieves the item type",
+        permission_classes=[OnlyForAuthentized()])
     async def type(self, info: strawberry.types.Info) -> typing.Optional["ItemTypeGQLModel"]:
         from .ItemTypeGQLModel import ItemTypeGQLModel
         result = None if self.type_id is None else await ItemTypeGQLModel.resolve_reference(info=info, id=self.type_id)
@@ -81,7 +89,9 @@ class ItemGQLModel(BaseGQLModel):
 #
 #############################################################
 
-@strawberry.field(description="Retrieves the item type")
+@strawberry.field(
+    description="Retrieves the item type",
+    permission_classes=[OnlyForAuthentized()])
 async def item_by_id(
     self, info: strawberry.types.Info, id: uuid.UUID
 ) -> typing.Optional[ItemGQLModel]:
@@ -97,9 +107,11 @@ class FormItemWhereFilter:
     name: str
     name_en: str
     type_id: uuid.UUID
-    value: str
+    # value: str # potencialni unik informaci pomoci where: { value: {_eq: ""}}
 
-@strawberry.field(description="Retrieves the item type")
+@strawberry.field(
+    description="Retrieves the item type",
+    permission_classes=[OnlyForAuthentized(isList=True)])
 async def item_page(
     self, info: strawberry.types.Info, skip: int = 0, limit: int = 0,
     where: typing.Optional[FormItemWhereFilter] = None
@@ -119,6 +131,7 @@ class FormItemInsertGQLModel:
     name: str = strawberry.field(description="Item name")
     part_id: uuid.UUID = strawberry.field(description="id of parent entity")
 
+    name_en: typing.Optional[str] = strawberry.field(description="Item name", default=None)
     id: typing.Optional[uuid.UUID] = strawberry.field(description="primary key (UUID), could be client generated", default=None)
     value: typing.Optional[str] = None
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
@@ -133,6 +146,7 @@ class FormItemUpdateGQLModel:
     id: uuid.UUID = strawberry.field(description="primary key (UUID), identifies object of operation")
 
     name: typing.Optional[str] = strawberry.field(description="Item name", default=None)
+    name_en: typing.Optional[str] = strawberry.field(description="Item name", default=None)
     value: typing.Optional[str] = None
     order: typing.Optional[int] = strawberry.field(description="Position in parent entity", default=None)
     type_id: typing.Optional[uuid.UUID] = None
@@ -151,7 +165,8 @@ For update operation fail should be also stated when bad lastchange has been ent
     
 
 @strawberry.field(
-    description="""Updates a section."""
+    description="""Updates a section.""",
+    permission_classes=[OnlyForAuthentized()]
 )
 async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQLModel) -> "FormItemResultGQLModel":
     user = getUserFromInfo(info)
@@ -165,7 +180,8 @@ async def item_update(self, info: strawberry.types.Info, item: FormItemUpdateGQL
 
 
 @strawberry.field(
-    description="""C operation"""
+    description="""C operation""",
+    permission_classes=[OnlyForAuthentized()]
 )
 async def item_insert(self, info: strawberry.types.Info, item: FormItemInsertGQLModel) -> "FormItemResultGQLModel":
     user = getUserFromInfo(info)

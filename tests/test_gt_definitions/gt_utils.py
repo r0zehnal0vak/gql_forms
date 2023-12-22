@@ -78,7 +78,7 @@ def createPageTest(tableName, queryEndpoint, attributeNames=["id", "name"]):
 
 def createResolveReferenceTest(tableName, gqltype, attributeNames=["id", "name"]):
     @pytest.mark.asyncio
-    async def result_test(SQLite, DemoData, ClientExecutorDemo, SchemaExecutorDemo, Env_GQLUG_ENDPOINT_URL_8124):
+    async def result_test(SQLite, DemoData, ClientExecutorDemo, SchemaExecutorDemo, Context, Env_GQLUG_ENDPOINT_URL_8124):
 
         def testResult(resp):
             print(resp)
@@ -160,7 +160,7 @@ def createFrontendQuery(query="{}", variables={}, asserts=[]):
 
         assert resp.get("errors", None) is None, resp["errors"]
         respdata = resp.get("data", None)
-        logging.debug(f"response: {respdata}")
+        logging.info(f"query for \n{query} with \n{variables} got response: \n{respdata}")
         for a in asserts:
             a(respdata)
     return test_frontend_query

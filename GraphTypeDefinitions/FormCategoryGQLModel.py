@@ -5,7 +5,7 @@ import uuid
 
 from utils.Dataloaders import getLoadersFromInfo, getUserFromInfo
 from .BaseGQLModel import BaseGQLModel
-
+from ._GraphPermissions import OnlyForAuthentized, RoleBasedPermission
 from GraphTypeDefinitions._GraphResolvers import (
     resolve_id,
     resolve_name,
@@ -44,7 +44,9 @@ class FormCategoryGQLModel(BaseGQLModel):
     name_en = resolve_name_en
     rbacobject = resolve_rbacobject
 
-    @strawberry.field(description="")
+    @strawberry.field(
+        description="",
+        permission_classes=[OnlyForAuthentized(isList=True)])
     async def form_types(self, info: strawberry.types.Info) -> typing.List[FormTypeGQLModel]:
         loader = getLoadersFromInfo(info).formtypes
         rows = await loader.filter_by(category_id=self.id)
@@ -99,7 +101,7 @@ form_category_page = createRootResolver_by_page(
 # Mutations
 #
 #############################################################
-
+from ._GraphPermissions import OnlyForAuthentized
 @strawberry.input(description="Input structure - C operation")
 class FormCategoryInsertGQLModel:
     name: str = strawberry.field(description="Category name")
@@ -119,7 +121,8 @@ class FormCategoryUpdateGQLModel:
 
 
 from ._GraphResolvers import resolve_result_id, resolve_result_msg
-@strawberry.type(description="Result of CU operations on FormCategory")
+@strawberry.type(
+    description="Result of CU operations on FormCategory")
 class FormCategoryResultGQLModel:
     id: uuid.UUID = strawberry.field(description="primary key of CU operation object")
     msg: str = strawberry.field(description="""Should be `ok` if descired state has been reached, otherwise `fail`.
@@ -132,7 +135,9 @@ For update operation fail should be also stated when bad lastchange has been ent
         return await FormCategoryGQLModel.resolve_reference(info, self.id)
 
 
-@strawberry.mutation(description="Create a new category")
+@strawberry.mutation(
+    description="Create a new category",
+    permission_classes=[OnlyForAuthentized()])
 async def form_category_insert(self, info: strawberry.types.Info, form_category: FormCategoryInsertGQLModel) -> FormCategoryResultGQLModel:
     user = getUserFromInfo(info)
     form_category.createdby = uuid.UUID(user["id"])
@@ -143,7 +148,9 @@ async def form_category_insert(self, info: strawberry.types.Info, form_category:
     result.id = row.id
     return result
 
-@strawberry.mutation(description="Update the category")
+@strawberry.mutation(
+    description="Update the category",
+    permission_classes=[OnlyForAuthentized()])
 async def form_category_update(self, info: strawberry.types.Info, form_category: FormCategoryUpdateGQLModel) -> FormCategoryResultGQLModel:
     user = getUserFromInfo(info)
     form_category.changedby = uuid.UUID(user["id"])
