@@ -18,7 +18,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_createdby,
     resolve_rbacobject,
     createRootResolver_by_id,
-    createRootResolver_by_page
+    # createRootResolver_by_page
 )
 
 FormGQLModel = Annotated["FormGQLModel", strawberry.lazy(".FormGQLModel")]

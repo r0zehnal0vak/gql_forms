@@ -16,7 +16,7 @@ from GraphTypeDefinitions._GraphResolvers import (
     resolve_createdby,
     resolve_rbacobject,
     createRootResolver_by_id,
-    createRootResolver_by_page
+    asPage
 )
 
 FormTypeGQLModel = typing.Annotated["FormTypeGQLModel", strawberry.lazy(".FormTypeGQLModel")]
@@ -90,12 +90,11 @@ form_category_by_id = createRootResolver_by_id(
 #     return result
 
 
-form_category_page = createRootResolver_by_page(
-    scalarType=FormCategoryGQLModel,
-    whereFilterType=FormCategoryWhereFilter,
-    description='Retrieves the form categories',
-    loaderLambda=lambda info: getLoadersFromInfo(info).formcategories
-)
+@strawberry.field(description='Retrieves the form categories')
+@asPage
+async def form_category_page(self, info: strawberry.types.Info, where: typing.Optional[FormCategoryWhereFilter] = None) -> typing.List[FormCategoryGQLModel]:
+    return getLoadersFromInfo(info).formcategories
+
 #############################################################
 #
 # Mutations

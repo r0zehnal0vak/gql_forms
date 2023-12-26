@@ -30,6 +30,9 @@ def DBModels():
         RequestModel,
         HistoryModel
     )
+    ##
+    # order is important!
+    ##
     return  [
             FormModel,
             FormTypeModel,

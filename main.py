@@ -4,10 +4,24 @@ import os
 from pydantic import BaseModel
 
 import logging
+import logging.handlers
+import socket
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s.%(msecs)03d\t%(levelname)s:\t%(message)s', 
     datefmt='%Y-%m-%dT%I:%M:%S')
+SYSLOGHOST = os.getenv("SYSLOGHOST", None)
+if SYSLOGHOST is not None:
+    [address, strport, *_] = SYSLOGHOST.split(':')
+    assert len(_) == 0, f"SYSLOGHOST {SYSLOGHOST} has unexpected structure, try `localhost:514` or similar (514 is UDP port)"
+    port = int(strport)
+    my_logger = logging.getLogger()
+    my_logger.setLevel(logging.INFO)
+    handler = logging.handlers.SysLogHandler(address=(address, port), socktype=socket.SOCK_DGRAM)
+    #handler = logging.handlers.SocketHandler('10.10.11.11', 611)
+    my_logger.addHandler(handler)
+
+
 
 from fastapi import FastAPI, Request, Depends
 from strawberry.fastapi import GraphQLRouter
@@ -105,9 +119,9 @@ from utils.sentinel import sentinel
 async def apollo_gql(request: Request, item: Item):
     DEMOE = os.getenv("DEMO", None)
     # logging.info(f"apollo_gql DEMO {DEMOE} {type(DEMOE)}, {DEMO}")
+    logging.info(f"asking sentinel for advice (is user authenticated?)")
+    sentinelResult = await sentinel(request, item)
     if DEMOE == "False":
-        logging.info(f"asking sentinel for advice (is user authenticated?)")
-        sentinelResult = await sentinel(request, item)
         if sentinelResult:
             return sentinelResult
         logging.info(f"sentinel test passed for user {request.scope['user']}")
