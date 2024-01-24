@@ -61,15 +61,8 @@ def get_demodata():
 
 async def initDB(asyncSessionMaker):
 
-    demoMode = os.environ.get("DEMO", "False")
-    if demoMode == "False":
-        dbModels = [
-            FormCategoryModel,
-            FormTypeModel,
-            ItemCategoryModel,
-            ItemTypeModel
-            ]
-    else:
+    demoMode = os.environ.get("DEMODATA", None)
+    if demoMode:
         dbModels = [
             FormCategoryModel,
             FormTypeModel,
@@ -82,6 +75,13 @@ async def initDB(asyncSessionMaker):
             PartModel,
             ItemModel
         ]
+    else:
+        dbModels = [
+            FormCategoryModel,
+            FormTypeModel,
+            ItemCategoryModel,
+            ItemTypeModel
+            ]
         
     jsonData = get_demodata()
     await ImportModels(asyncSessionMaker, dbModels, jsonData)
