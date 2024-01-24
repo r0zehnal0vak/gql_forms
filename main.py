@@ -124,7 +124,7 @@ async def apollo_gql(request: Request, item: Item):
     if DEMOE == "False":
         if sentinelResult:
             return sentinelResult
-        logging.info(f"sentinel test passed for user {request.scope['user']}")
+        logging.info(f"sentinel test passed for query={item} for user {request.scope.get('user', None)}")
     else:
         request.scope["user"] = {"id": "2d9dc5ca-a4a2-11ed-b9df-0242ac120003"}
         logging.info(f"sentinel skippend because of DEMO mode")
