@@ -62,6 +62,24 @@ async def initEngine(app: FastAPI):
 from GraphTypeDefinitions import schema
 from utils.sentinel import sentinel
 
+########################################################################################
+# Monitoring implementation:
+########################################################################################
+
+
+app = FastAPI(lifespan=initEngine)
+
+from prometheus_client import start_http_server, Histogram, Summary
+import time
+
+start_http_server(8080)
+
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app, metric_namespace="gql_forms").expose(app, endpoint="/metrics")
+
+APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
+
+@APOLLO_GQL_HISTOGRAM.time()
 async def get_context(request: Request):
     asyncSessionMaker = appcontext.get("asyncSessionMaker", None)
     if asyncSessionMaker is None:
@@ -83,7 +101,7 @@ async def get_context(request: Request):
     logging.info(f"context created {result}")
     return result
 
-app = FastAPI(lifespan=initEngine)
+
 
 from doc import attachVoyager
 attachVoyager(app, path="/gql/doc")
@@ -109,22 +127,13 @@ class Item(BaseModel):
 
 app.include_router(graphql_app, prefix="/gql2")
 
+
 @app.get("/gql")
 async def graphiql(request: Request):
     return await graphql_app.render_graphql_ide(request)
 
 ########################################################################################
 ########################################################################################
-
-from prometheus_client import start_http_server, Histogram, Summary
-import time
-
-start_http_server(8080)
-
-from prometheus_fastapi_instrumentator import Instrumentator
-Instrumentator().instrument(app, metric_namespace="gql_forms").expose(app, endpoint="/metrics")
-
-APOLLO_GQL_HISTOGRAM = Histogram('apollo_gql_processing_seconds', 'Time spent processing apollo_gql requests')
 
 @APOLLO_GQL_HISTOGRAM.time()
 @app.post("/gql")
